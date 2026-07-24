@@ -1,5 +1,6 @@
 # PRD source — confidential, never committed
 docs/*.pdf
+docs/PRD_v1.0.md
 docs/.derived/
 
 # standard
