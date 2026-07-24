@@ -10,3 +10,4 @@ export { handleSuggestions } from './handlers/suggestions';
 export { handleNodes } from './handlers/nodes';
 export { handleTimeline } from './handlers/timeline';
 export { handleIngest } from './handlers/ingest';
+export { handleFederatedModel, handleFederatedAggregate } from './handlers/federated';

@@ -147,7 +147,45 @@ The PCG is a durable, portable, bi-temporal representation of the user's communi
 | 12 | **Voice Authenticity Watermark** | Inaudible, tamper-resistant watermark + public Verification API |
 | 13 | **Emergency Vocabulary Escalation** | Always-available Tier 3 partition, reachable even offline or under cognitive overload |
 | 14 | **Communication Patterns Audit** | Quarterly debias report surfacing the system's own biases to user and SLP |
- 
+
+### 4.3 Federated privacy-preserving PCG learning ✅ *(implemented)*
+
+Clinics collaboratively improve the shared **communication model** (the adaptive
+ranker) — so a phrasing pattern one clinic's patients respond to helps everyone —
+**without any patient's raw communication data or PCG ever leaving the clinic.**
+
+```
+each clinic (local, never leaves):   local step on its own accept/reject feedback → Δw
+   → clip to ‖Δw‖₂ ≤ C   (bound sensitivity)
+   → + Gaussian DP noise  (ε, δ)      ← differential privacy
+   → + pairwise masks     (cancel in the sum)   ← secure aggregation
+   ══ transmit the masked, noised Δw only ═══════════════════════════════════►
+aggregator:  mean(masked Δw) == mean(true Δw)   → apply to global model (Safety pinned)
+```
+
+- **No raw data leaves.** Only a masked weight delta is sent; the wire type carries no
+  utterances, features, or PCG. There is **no endpoint that accepts raw feedback**.
+- **Secure aggregation.** Pairwise masks sum to zero → the server recovers the *mean*
+  update and never sees any single clinic's contribution.
+- **Differential privacy.** Gradient clipping + the Gaussian mechanism give **(ε,
+  δ)-DP per round**, tracked by a privacy-budget ledger.
+- **Safety stays pinned.** The Safety feature (learning-rate 0) can't drift through
+  federation — the same hard constraint as the single-user ranker.
+
+Code: [`packages/federated`](packages/federated) · API: `GET /v1/federated/model`,
+`POST /v1/federated/aggregate` · Store: `supabase/migrations/0003_federated.sql`
+(aggregate model only). Full design + threat model in [SPEC §18](docs/SPEC.md#18-federated-privacy-preserving-pcg-learning-feature).
+
+```bash
+# current global model
+curl localhost:3000/api/v1/federated/model
+# aggregate three clinics' MASKED deltas into a new round (no raw data)
+curl -X POST localhost:3000/api/v1/federated/aggregate -H 'content-type: application/json' \
+  -d '{"updates":[{"clinicId":"brooks","maskedDelta":[0.3,0.1,0.7,0.05,0.02,0.01],"sampleCount":40},
+                   {"clinicId":"kessler","maskedDelta":[0.1,0.05,-0.7,0.03,0.01,0.02],"sampleCount":35},
+                   {"clinicId":"shirley","maskedDelta":[0.2,-0.05,0.0,0.02,-0.01,0.0],"sampleCount":28}],
+       "dp":{"epsilon":1.0,"delta":1e-5}}'
+```
 
 ## 5. Tech Stack
 

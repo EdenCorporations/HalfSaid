@@ -627,5 +627,70 @@ Tracked live; see the implementation plan and [CLAUDE.md](../CLAUDE.md).
 
 ---
 
+## 18. Federated privacy-preserving PCG learning `[feature]`
+
+**Goal.** Let clinics collaboratively improve the shared **communication model** (the
+adaptive ranker, §5.2) — so a phrase pattern one clinic's patients respond to helps
+everyone — **without any patient's raw communication data or PCG ever leaving the
+clinic.** Implemented in `packages/federated` + `/v1/federated`.
+
+### 18.1 What is federated
+
+Only the ranker **weight vector** (6 numbers: relevance, personalVoice, safety,
+recency, variety, contextMatch) is shared. Utterances, features, episodes, edges —
+none of it is transmitted. Each clinic trains locally on its own accept/reject
+feedback and emits a single masked, noised weight **delta**.
+
+### 18.2 The round (per clinic, then aggregate)
+
+```
+on-clinic (never leaves):   local logistic step on this clinic's feedback  →  Δw
+  ↓  clip                    Δw scaled to ‖Δw‖₂ ≤ C          (bounds sensitivity)
+  ↓  differential privacy    Δw += N(0, σ²)  where σ = C·√(2 ln(1.25/δ)) / ε
+  ↓  secure-agg mask         Δw += Σ_pairs ±PRG(seed(a,b))   (pairwise, cancel in sum)
+  ── transmit masked Δw only ─────────────────────────────────────────────────────►
+aggregator:                  mean(masked Δw)  ==  mean(true Δw)   (masks cancel)
+  ↓  apply                    w ← w + mean(Δw),  Safety component pinned (LR 0)
+```
+
+### 18.3 Guarantees (each has a test in `packages/federated`)
+
+- **No raw data leaves.** The wire type `ClinicUpdate` is structurally `{ clinicId,
+  maskedDelta, sampleCount }` — no features/utterances/PCG. There is **no API that
+  accepts raw feedback**; `/v1/federated/aggregate` takes only masked deltas.
+- **Secure aggregation.** Pairwise masks sum to zero, so the aggregator recovers the
+  **mean** of the true updates and **never sees any individual clinic's update**
+  (`mean(masked) === mean(raw)`, proven to 1e-9).
+- **Differential privacy.** Gradient clipping (sensitivity C) + the Gaussian
+  mechanism give each round **(ε, δ)-DP** per clinic; a `PrivacyLedger` accounts the
+  budget across rounds (basic composition).
+- **Safety stays pinned.** The Safety feature's learning rate is 0 — it cannot drift
+  through federation any more than through the single-user ranker (§5.2).
+- **It works.** Three clinics with disjoint synthetic feedback cut held-out logistic
+  loss over 20 rounds while sharing only masked deltas.
+
+### 18.4 Threat model
+
+- **Honest-but-curious aggregator:** sees only masked deltas (secure agg) — learns
+  nothing about an individual clinic, and each delta is DP-noised regardless.
+- **Curious clinic:** sees only the global aggregate model, never another clinic's
+  data or update.
+- **Out of scope for MVP:** dropout-robust masking (Bonawitz double-masking),
+  malicious-aggregator verification, advanced (RDP) composition — noted for later.
+
+### 18.5 API + storage
+
+- `GET /v1/federated/model` → the current aggregate weights + round.
+- `POST /v1/federated/aggregate` → masked `updates[]` + `dp{ε,δ}` → new model
+  (Safety pinned), round advanced, budget logged.
+- Migration `0003_federated.sql`: `federated_model` (singleton aggregate weights) and
+  `federated_round_log` (round, clinic count, ε/δ spent). **Aggregate only — no
+  patient data.** RLS on; readable by clinicians, written by the aggregator.
+
+Verified end-to-end against real Supabase: three clinics' masked deltas advanced the
+global model (relevance 0.35 → 0.55) with Safety pinned at 0.15 and the round logged.
+
+---
+
 *End of SPEC.md. Keep this file accurate; update the Known Deviations table and Open
 Questions as the build proceeds.*
