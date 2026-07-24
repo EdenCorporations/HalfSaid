@@ -55,16 +55,33 @@ async function main() {
   await client.connect();
   console.log('connected:', pgConfig().host);
 
-  const exists = await client.query("select to_regclass('public.pcg_nodes') as t");
-  if (!exists.rows[0].t) {
-    for (const file of readdirSync(MIGRATIONS)
-      .filter((f) => f.endsWith('.sql'))
-      .sort()) {
-      console.log('applying migration', file);
-      await client.query(readFileSync(join(MIGRATIONS, file), 'utf8'));
+  // Incremental migrations tracked in schema_migrations.
+  await client.query(
+    'create table if not exists public.schema_migrations (version text primary key, applied_at timestamptz not null default now())',
+  );
+  const files = readdirSync(MIGRATIONS)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+  const pcgExists = (await client.query("select to_regclass('public.pcg_nodes') as t")).rows[0].t;
+  const applied = new Set(
+    (await client.query('select version from public.schema_migrations')).rows.map((r) => r.version),
+  );
+  // Backfill: an older DB may already have 0001/0002 applied but untracked.
+  if (pcgExists && applied.size === 0) {
+    for (const f of files.filter((f) => f.startsWith('0001') || f.startsWith('0002'))) {
+      await client.query('insert into public.schema_migrations (version) values ($1)', [f]);
+      applied.add(f);
     }
-  } else {
-    console.log('schema already present — skipping migrations');
+    console.log('backfilled schema_migrations for existing 0001/0002');
+  }
+  for (const file of files) {
+    if (applied.has(file)) {
+      console.log('already applied —', file);
+      continue;
+    }
+    console.log('applying migration', file);
+    await client.query(readFileSync(join(MIGRATIONS, file), 'utf8'));
+    await client.query('insert into public.schema_migrations (version) values ($1)', [file]);
   }
 
   const count = await client.query('select count(*)::int as n from public.pcg_nodes');
