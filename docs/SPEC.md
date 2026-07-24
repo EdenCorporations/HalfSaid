@@ -466,6 +466,7 @@ reason. Add to this list as deviations are made.
 | D13 | Data-layer tests (schema/bi-temporal/RLS/seed) run the real migrations on **PGlite** (Postgres compiled to WASM) instead of a Dockered Supabase stack; migrations stay Supabase-native | §24.4 | Docker-free, secret-free CI. Requires Jest with `NODE_OPTIONS=--experimental-vm-modules` (wired into `npm test`) |
 | D14 | Dev/CI embeddings use a **deterministic bag-of-words `MockEmbedder`** (1024-d); the hosted embedder (D10) is a placeholder not exercised without a key | §14 | No embedding key in CI; BoW gives enough token-overlap signal over the curated seed |
 | D15 | A **4th retrieval source — a predictive salience/recency prior** (PRD §13.6) — is added alongside semantic/subgraph/keyword so a generic opener ("I want to…") surfaces habitual phrases; near-variants are de-duplicated | §17.1 | Pure semantic/keyword can't connect a bare opener to "call Sarah"; the prior is how the demo three emerge without hardcoding |
+| D16 | `/v1/*` handlers are framework-agnostic (`Request`→`Response`) with **auth + DB executor injected**; the Next.js routes wire them. In **mock mode** the DB is a single in-memory **PGlite** (migrations+seed+embeddings) and auth is a header/demo-user; the **real per-request Postgres executor is stubbed** (throws unless mock mode) | §12, §24.1 | Whole API runs offline without Supabase for the demo/CI; real Postgres + JWT wiring is a deploy concern (Phase 7). Mock DB shares one session, so it is single-user only |
 
 **Phase-2 enhancement beyond the PRD (not a deviation):** an **append-only trigger**
 on `pcg_nodes`/`pcg_edges` makes the bi-temporal "corrections supersede, never
@@ -481,9 +482,9 @@ MVP implements the first three; the rest are post-MVP and listed for context.
 
 | Endpoint | Method | Auth | Purpose | MVP? |
 |---|---|---|---|---|
-| `/v1/suggestions` | POST | Supabase JWT | Context in → ranked candidates + confidence + provenance out | ✅ |
-| `/v1/pcg/nodes` | GET/POST/PATCH/DELETE | Supabase JWT + tier check | CRUD on PCG nodes; DELETE triggers revocation | ✅ |
-| `/v1/pcg/timeline` | GET | Supabase JWT | Memory Timeline, filterable | ✅ |
+| `/v1/suggestions` | POST | Supabase JWT | Context in → ranked candidates + confidence + provenance out | ✅ done |
+| `/v1/pcg/nodes` | GET/POST/PATCH/DELETE | Supabase JWT + RLS | CRUD; PATCH = append-only correction (supersede); DELETE revokes | ✅ done |
+| `/v1/pcg/timeline` | GET | Supabase JWT | Memory Timeline, filterable (person/topic/emotion/language) | ✅ done |
 | `/v1/episodes/{id}/replay` | GET | Clinician OAuth | Replay Studio data | ✗ post-MVP |
 | `/v1/therapy/session` | POST | Clinician OAuth | Therapy Mode session | ✗ post-MVP |
 | `/v1/voice/synthesize` | POST | JWT + consent | Cloned-voice TTS + watermark | ✗ post-MVP |
@@ -492,6 +493,15 @@ MVP implements the first three; the rest are post-MVP and listed for context.
 
 **Every `/v1/suggestions` response carries confidence and provenance.** Typed
 contracts are shared between client and server via `packages/shared-types`.
+
+**Implementation** (`packages/api`, Next.js routes under `apps/web/app/api/v1`):
+handlers are framework-agnostic `(Request, ApiDeps) → Response`, with the
+authenticated user and an **RLS-scoped SQL executor injected**. The user comes from
+the Supabase JWT, never the body; every query runs as that authenticated user so RLS
+enforces owner-only access. In **mock mode** the API runs against an in-memory PGlite
+seeded with Maya — no Supabase needed (deviation D16). Verified end-to-end under
+`next dev`: `/v1/suggestions` returns the three demo candidates with confidence,
+provenance, and a provenance-derived explanation.
 
 ---
 

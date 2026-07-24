@@ -65,8 +65,8 @@ const BOOTSTRAP_SQL = `
   end $$;
 `;
 
-function migrationFiles(): string[] {
-  return readdirSync(MIGRATIONS_DIR)
+function migrationFiles(dir: string): string[] {
+  return readdirSync(dir)
     .filter((f) => f.endsWith('.sql'))
     .sort();
 }
@@ -74,15 +74,22 @@ function migrationFiles(): string[] {
 export interface CreateTestDbOptions {
   /** Also apply supabase/seed.sql (the Maya PCG). */
   withSeed?: boolean;
+  /** Override the migrations directory (default resolves from this file). */
+  migrationsDir?: string;
+  /** Override the seed file path (default resolves from this file). */
+  seedFile?: string;
 }
 
 /** Spin up a fresh in-memory database with migrations (and optional seed) applied. */
 export async function createTestDb(options: CreateTestDbOptions = {}): Promise<TestDb> {
+  const migrationsDir = options.migrationsDir ?? MIGRATIONS_DIR;
+  const seedFile = options.seedFile ?? SEED_FILE;
+
   const db = new PGlite({ extensions: { vector } });
   await db.exec(BOOTSTRAP_SQL);
 
-  for (const file of migrationFiles()) {
-    const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
+  for (const file of migrationFiles(migrationsDir)) {
+    const sql = readFileSync(join(migrationsDir, file), 'utf8');
     await db.exec(sql);
   }
 
@@ -97,7 +104,7 @@ export async function createTestDb(options: CreateTestDbOptions = {}): Promise<T
   `);
 
   if (options.withSeed) {
-    const seed = readFileSync(SEED_FILE, 'utf8');
+    const seed = readFileSync(seedFile, 'utf8');
     await db.exec(seed);
   }
 

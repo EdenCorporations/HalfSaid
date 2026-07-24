@@ -158,3 +158,24 @@ export interface CandidatesResponse {
 
 /** Response of POST /v1/suggestions (SPEC §12). */
 export type SuggestionsResponse = CandidatesResponse | RefusalResponse;
+
+// ---------------------------------------------------------------------------
+// HTTP API contracts (SPEC §12)
+// ---------------------------------------------------------------------------
+
+export type {
+  ApiError,
+  SuggestRequest,
+  PcgNodeDTO,
+  NodesQuery,
+  NodesResponse,
+  NodeCreateBody,
+  NodeCorrectBody,
+  NodeCorrectResponse,
+  NodeDeleteBody,
+  NodeDeleteResponse,
+  TimelineQuery,
+  TimelineItem,
+  TimelineResponse,
+} from './api';
+export { toNodeDTO } from './api';
