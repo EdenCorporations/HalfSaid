@@ -63,32 +63,44 @@ const l2 = (v) => {
 // of 50 through :batchEmbedContents; 1024-d truncation requires re-normalizing.
 // MIRRORS GeminiEmbedder in packages/retrieval/src/embeddings.ts. ------------------
 const GEMINI_MODEL = 'gemini-embedding-001';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function geminiEmbedBatch(texts, apiKey) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:batchEmbedContents`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      requests: texts.map((text) => ({
-        model: `models/${GEMINI_MODEL}`,
-        content: { parts: [{ text }] },
-        taskType: 'SEMANTIC_SIMILARITY',
-        outputDimensionality: DIM,
-      })),
-    }),
-  });
-  if (!res.ok) throw new Error(`gemini batch embed failed (${res.status}): ${await res.text()}`);
-  const data = await res.json();
-  return data.embeddings.map((e) => l2(e.values));
+  // The free tier rate-limits aggressively; retry 429s with growing backoff.
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        requests: texts.map((text) => ({
+          model: `models/${GEMINI_MODEL}`,
+          content: { parts: [{ text }] },
+          taskType: 'SEMANTIC_SIMILARITY',
+          outputDimensionality: DIM,
+        })),
+      }),
+    });
+    if (res.status === 429 && attempt <= 6) {
+      const wait = attempt * 15_000;
+      console.log(`  rate-limited — waiting ${wait / 1000}s (attempt ${attempt}/6)…`);
+      await sleep(wait);
+      continue;
+    }
+    if (!res.ok) throw new Error(`gemini batch embed failed (${res.status}): ${await res.text()}`);
+    const data = await res.json();
+    return data.embeddings.map((e) => l2(e.values));
+  }
 }
 
 async function embedAll(texts, apiKey) {
   if (!apiKey) return texts.map(mockEmbed);
   const out = [];
-  for (let i = 0; i < texts.length; i += 50) {
-    const batch = texts.slice(i, i + 50);
+  for (let i = 0; i < texts.length; i += 25) {
+    const batch = texts.slice(i, i + 25);
     out.push(...(await geminiEmbedBatch(batch, apiKey)));
-    console.log(`  embedded ${Math.min(i + 50, texts.length)}/${texts.length} (gemini)`);
+    console.log(`  embedded ${Math.min(i + 25, texts.length)}/${texts.length} (gemini)`);
+    if (i + 25 < texts.length) await sleep(1500);
   }
   return out;
 }
