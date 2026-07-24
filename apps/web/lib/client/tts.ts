@@ -12,6 +12,12 @@ export function speak(text: string): void {
   window.speechSynthesis.speak(utterance);
 }
 
+/** Stop any in-progress speech (the undo path). */
+export function cancelSpeech(): void {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+}
+
 export function isTtsAvailable(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window;
 }

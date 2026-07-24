@@ -3,6 +3,8 @@
 import { useCallback, useState } from 'react';
 import type { SuggestRequest, SuggestionsResponse } from '@halfsaid/shared-types';
 
+import { personaHeaders } from './persona';
+
 /** Client hook: POST /v1/suggestions and hold the candidates/refusal response. */
 export function useSuggestions() {
   const [response, setResponse] = useState<SuggestionsResponse | null>(null);
@@ -15,7 +17,7 @@ export function useSuggestions() {
     try {
       const res = await fetch('/api/v1/suggestions', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...personaHeaders() },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`request failed (${res.status})`);
