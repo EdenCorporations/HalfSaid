@@ -54,6 +54,21 @@ export function gateFor(confidence: number): ConfidenceGate {
 }
 
 /**
+ * A provenance-derived, one-line explanation (SPEC §8). Derived only from the source
+ * tag — never a generated reason. The actual cited PCG ids live in `provenance`.
+ */
+export function explanationForSourceTag(tag: SourceTag): string {
+  switch (tag) {
+    case 'therapist-approved':
+      return 'Approved by your therapist.';
+    case 'family-validated':
+      return 'A phrase your family confirmed.';
+    case 'yours':
+      return 'From your own past words.';
+  }
+}
+
+/**
  * The single tag shown on a composed card. When multiple items compose one
  * candidate, the weakest provenance wins (therapist > family > yours), so the card
  * never over-claims validation.
@@ -120,13 +135,15 @@ export function buildCandidate(params: BuildCandidateParams): SuggestionCandidat
     edgeIds: [...(params.edgeIds ?? [])],
   };
 
+  const sourceTag = weakestSourceTag(sourceItems);
   return Object.freeze({
     text,
     mode,
-    sourceTag: weakestSourceTag(sourceItems),
+    sourceTag,
     confidence,
     gate: confidence >= CONFIDENCE.SHIP ? 'ship' : 'sandbox',
     provenance,
+    explanation: explanationForSourceTag(sourceTag),
   });
 }
 

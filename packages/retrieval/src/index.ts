@@ -53,3 +53,4 @@ export {
   type ConfidenceInputs,
   type Scored,
 } from './confidence';
+export { suggest, type SuggestOptions } from './suggest';
