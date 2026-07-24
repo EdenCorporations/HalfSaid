@@ -37,11 +37,13 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Accessibility (axe-core — zero violations required)
+        run: npm run test:a11y
+
       - name: License audit (fails on GPLv3 / AGPL / CPML / CC-BY-NC)
         run: npm run license-audit
 
     # Gates added in later phases (SPEC §16):
-    #   - axe-core accessibility (zero violations) — Phase 5
     #   - Snyk / Semgrep / Trivy security scans     — Phase 7
     #   - Playwright E2E on the 3-minute demo path  — Phase 7
     #   - 80% coverage enforcement                  — as suites grow

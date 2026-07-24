@@ -467,6 +467,7 @@ reason. Add to this list as deviations are made.
 | D14 | Dev/CI embeddings use a **deterministic bag-of-words `MockEmbedder`** (1024-d); the hosted embedder (D10) is a placeholder not exercised without a key | §14 | No embedding key in CI; BoW gives enough token-overlap signal over the curated seed |
 | D15 | A **4th retrieval source — a predictive salience/recency prior** (PRD §13.6) — is added alongside semantic/subgraph/keyword so a generic opener ("I want to…") surfaces habitual phrases; near-variants are de-duplicated | §17.1 | Pure semantic/keyword can't connect a bare opener to "call Sarah"; the prior is how the demo three emerge without hardcoding |
 | D16 | `/v1/*` handlers are framework-agnostic (`Request`→`Response`) with **auth + DB executor injected**; the Next.js routes wire them. In **mock mode** the DB is a single in-memory **PGlite** (migrations+seed+embeddings) and auth is a header/demo-user; the **real per-request Postgres executor is stubbed** (throws unless mock mode) | §12, §24.1 | Whole API runs offline without Supabase for the demo/CI; real Postgres + JWT wiring is a deploy concern (Phase 7). Mock DB shares one session, so it is single-user only |
+| D17 | ASR is **record-then-transcribe** (near-real-time) via a `/api/v1/asr` proxy to Groq Whisper large-v3, not token-by-token streaming | §16 | MediaRecorder + a single Groq transcription call is enough for the demo; the streaming/chunked pipeline is post-MVP. Verified round-trip: speech → route → correct transcript |
 
 **Phase-2 enhancement beyond the PRD (not a deviation):** an **append-only trigger**
 on `pcg_nodes`/`pcg_edges` makes the bi-temporal "corrections supersede, never
@@ -523,6 +524,15 @@ provenance, and a provenance-derived explanation.
   emotionally neutral (no "you rejected the AI" guilt).
 - **Cognitive load budget** `[PRD §10.4]`: ≤5 suggestions at once; candidate length
   ≤8 words for moderate-severe aphasia (Maya); audio cues off by default.
+
+**Implemented** (`apps/web/components/canvas`): `SuggestionCard` (candidate + source
+tag + `role=meter` confidence bar + provenance explanation, with Accept / Edit /
+Dismiss as real ≥44px keyboard-operable buttons), `InputBar` (mic / labelled text /
+emergency), and `ConversationCanvas` (aria-live transcript + a `role=status` that
+announces new suggestions without stealing focus; focus returns to the input after
+each action). Mic → Groq Whisper (`useAsr` → `/api/v1/asr`); accepted cards are
+spoken via browser `SpeechSynthesis` (`tts.ts`). The refusal path is a first-class
+card. Tested with **jest-axe (zero violations)**, wired into CI as `test:a11y`.
 
 ---
 
