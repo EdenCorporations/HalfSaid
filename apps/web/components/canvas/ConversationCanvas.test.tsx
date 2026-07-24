@@ -76,8 +76,8 @@ describe('ConversationCanvas', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Spoken')).toBeInTheDocument());
     expect(within(screen.getByLabelText('Spoken')).getByText('call Sarah')).toBeInTheDocument();
-    // The spoken phrase is persisted to the PCG for the conversation log.
-    expect(global.fetch).toHaveBeenCalledWith('/api/v1/pcg/nodes', expect.any(Object));
+    // The spoken phrase is ingested into the PCG for the conversation log.
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/pcg/ingest', expect.any(Object));
   });
 
   it('renders the first-class refusal path', async () => {
