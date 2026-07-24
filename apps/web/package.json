@@ -12,6 +12,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.2.17",
+    "@halfsaid/api": "*",
+    "@halfsaid/pcg": "*",
+    "@halfsaid/retrieval": "*",
     "@halfsaid/safety-policy": "*",
     "@halfsaid/shared-types": "*",
     "@halfsaid/ui-tokens": "*",
