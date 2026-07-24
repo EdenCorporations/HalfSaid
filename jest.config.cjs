@@ -12,6 +12,7 @@ module.exports = {
     '^.+\\.ts$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.base.json' }],
   },
   moduleNameMapper: {
+    '^@halfsaid/pcg/testing$': '<rootDir>/packages/pcg/src/testing/harness.ts',
     '^@halfsaid/([^/]+)$': '<rootDir>/packages/$1/src',
   },
   collectCoverageFrom: ['packages/*/src/**/*.ts', '!packages/*/src/**/*.d.ts'],
