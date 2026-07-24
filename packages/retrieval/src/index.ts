@@ -32,3 +32,24 @@ export {
   type RetrievedCandidate,
   type RetrievalScores,
 } from './types';
+
+export {
+  INITIAL_WEIGHTS,
+  LEARNING_RATES,
+  safetyFeature,
+  features,
+  score,
+  updateWeights,
+  rank,
+  type FeatureVector,
+  type RankerWeights,
+  type RankedCandidate,
+} from './ranker';
+export {
+  confidenceFrom,
+  inputsForRanked,
+  scoreConfidence,
+  toSourceItem,
+  type ConfidenceInputs,
+  type Scored,
+} from './confidence';
