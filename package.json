@@ -20,7 +20,8 @@
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "test:a11y": "jest --selectProjects web",
     "test:e2e": "npm run test:e2e --workspace=apps/web --if-present",
-    "license-audit": "node scripts/license-audit.mjs"
+    "license-audit": "node scripts/license-audit.mjs",
+    "db:apply-supabase": "node scripts/apply-supabase.mjs"
   },
   "devDependencies": {
     "@types/jest": "^29.5.13",
