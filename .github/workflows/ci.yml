@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    name: lint · typecheck · test · build · license
+    runs-on: ubuntu-latest
+    env:
+      # CI runs without secrets — mock/fixture mode is mandatory (SPEC §15).
+      HALFSAID_MOCK_MODE: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Build first: `next build` generates next-env.d.ts + .next/types that the
+      # typecheck step depends on (SPEC §16).
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint (Prettier + ESLint)
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: License audit (fails on GPLv3 / AGPL / CPML / CC-BY-NC)
+        run: npm run license-audit
+
+    # Gates added in later phases (SPEC §16):
+    #   - axe-core accessibility (zero violations) — Phase 5
+    #   - Snyk / Semgrep / Trivy security scans     — Phase 7
+    #   - Playwright E2E on the 3-minute demo path  — Phase 7
+    #   - 80% coverage enforcement                  — as suites grow

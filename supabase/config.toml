@@ -1,0 +1,51 @@
+# Supabase local config for HalfSaid (SPEC §15).
+# Local stack (`supabase start`) requires Docker; schema is defined only via
+# migrations under supabase/migrations (SPEC §4.3 — migrations are the single
+# source of truth for schema; no manual changes). Migrations + the Maya seed land
+# in Phase 2.
+
+project_id = "halfsaid"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Postgres 15 (Supabase free tier, SPEC §15).
+major_version = 15
+
+[db.pooler]
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+# Local email testing — used by email magic-link auth (SPEC O1/D9).
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+# Email magic-link / OTP is the MVP auth method (SPEC O1/D9, deviation from
+# PRD §31.1 GitHub OAuth).
+enable_signup = true
+enable_confirmations = false
+
+[analytics]
+enabled = false
