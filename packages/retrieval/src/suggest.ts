@@ -13,7 +13,7 @@
  * free generation. When nothing surfaces, the first-class refusal path fires.
  */
 
-import { buildCandidate, assertGrounded } from '@halfsaid/safety-policy';
+import { buildCandidate, assertGrounded, detectHighStakes } from '@halfsaid/safety-policy';
 import type { SuggestionCandidate, SuggestionsResponse } from '@halfsaid/shared-types';
 
 import { getEmbedder, type Embedder } from './embeddings';
@@ -40,11 +40,19 @@ export interface SuggestOptions {
 
 const REFUSAL_ALTERNATIVES = ['Type it out', 'Switch input mode', 'Ask your SLP'];
 
-function refusal(): SuggestionsResponse {
+interface StakesInfo {
+  highStakes?: boolean;
+  highStakesCategory?: string;
+}
+
+function refusal(stakes: StakesInfo = {}): SuggestionsResponse {
   return {
     kind: 'refusal',
-    reason: "I don't have a confident suggestion.",
+    reason: stakes.highStakes
+      ? 'This sounds important — only clinician-approved phrases are offered here, and none match yet.'
+      : "I don't have a confident suggestion.",
     alternatives: REFUSAL_ALTERNATIVES,
+    ...stakes,
   };
 }
 
@@ -57,6 +65,16 @@ export async function suggest(
   const weights = options.weights ?? INITIAL_WEIGHTS;
   const nowEpoch = options.nowEpoch ?? Math.floor(Date.now() / 1000);
   const maxCards = options.maxCards ?? 5;
+
+  // High-stakes is FORCED (caller flag) or DETECTED from the text itself (SPEC
+  // §7.3 — medical/legal/financial/consent topics never get free generation).
+  const detection = detectHighStakes(ctx.partialText);
+  if (detection.highStakes && !ctx.highStakes) {
+    ctx = { ...ctx, highStakes: true };
+  }
+  const stakes: StakesInfo = ctx.highStakes
+    ? { highStakes: true, highStakesCategory: detection.category }
+    : {};
 
   // Retrieve PCG items — as generation context (primary) or as the candidate pool
   // (fallback). Policy filters (incl. high-stakes) already applied.
@@ -73,7 +91,7 @@ export async function suggest(
         fetchImpl: options.fetchImpl,
       });
       const cards = generated.slice(0, maxCards);
-      if (cards.length > 0) return { kind: 'candidates', candidates: cards };
+      if (cards.length > 0) return { kind: 'candidates', candidates: cards, ...stakes };
       // LLM returned nothing usable — fall through to the constrained path.
     } catch {
       // LLM/network failure — fall back to constrained retrieval below.
@@ -83,7 +101,7 @@ export async function suggest(
   // Fallback: constrained decoding straight from PCG items.
   const ranked = rank(retrieved, ctx, weights, nowEpoch, retrieved.length);
   const kept = ranked.map(scoreConfidence).filter((s) => s.gate !== 'refuse');
-  if (kept.length === 0) return refusal();
+  if (kept.length === 0) return refusal(stakes);
 
   const candidates: SuggestionCandidate[] = [];
   for (const scored of kept.slice(0, maxCards)) {
@@ -98,5 +116,5 @@ export async function suggest(
     candidates.push(candidate);
   }
 
-  return candidates.length > 0 ? { kind: 'candidates', candidates } : refusal();
+  return candidates.length > 0 ? { kind: 'candidates', candidates, ...stakes } : refusal(stakes);
 }

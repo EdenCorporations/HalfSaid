@@ -10,6 +10,8 @@ import {
   assertGrounded,
   gateFor,
   applyHighStakesFilter,
+  detectHighStakes,
+  isHighStakes,
   HardRuleViolation,
   type PcgSourceItem,
 } from '../index';
@@ -181,5 +183,35 @@ describe('high-stakes hard-block seam (SPEC §7.3, forced flag)', () => {
     const out = applyHighStakesFilter(items, { forced: true }, tierOf);
     expect(out).toHaveLength(1);
     expect(out[0]!.nodeId).toBe('c');
+  });
+});
+
+describe('high-stakes topic detection (SPEC §7.3 — now detected, not just forced)', () => {
+  it.each([
+    ['I need my medication', 'medical'],
+    ['what is the dosage', 'medical'],
+    ['I am allergic to penicillin', 'medical'],
+    ['should I sign the contract', 'legal'],
+    ['call my lawyer', 'legal'],
+    ['transfer money to the bank', 'financial'],
+    ['I consent to the procedure', 'consent'],
+  ])('detects "%s" as %s', (text, category) => {
+    const d = detectHighStakes(text);
+    expect(d.highStakes).toBe(true);
+    expect(d.category).toBe(category);
+  });
+
+  it.each(['I want tea', 'call Sarah', 'go to the garden', 'read my book'])(
+    'leaves everyday phrase "%s" alone',
+    (text) => {
+      expect(detectHighStakes(text).highStakes).toBe(false);
+    },
+  );
+
+  it('isHighStakes fires on forced OR detected text', () => {
+    expect(isHighStakes({ forced: true })).toBe(true);
+    expect(isHighStakes({ forced: false, text: 'sign the contract' })).toBe(true);
+    expect(isHighStakes({ forced: false, text: 'I want tea' })).toBe(false);
+    expect(isHighStakes({ forced: false })).toBe(false);
   });
 });

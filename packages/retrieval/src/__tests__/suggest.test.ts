@@ -111,4 +111,23 @@ describe('suggest() end-to-end', () => {
       expect(res.kind).toBe('refusal');
     }
   });
+
+  it('DETECTS a high-stakes topic and never free-generates for it (SPEC §7.3)', async () => {
+    const llmSpy = jest.fn();
+    const res = await suggest(
+      exec,
+      { userId: MAYA, partialText: 'I need my medication', intent: 'request' },
+      { ...opts, groqApiKey: 'k', fetchImpl: llmSpy as unknown as typeof fetch },
+    );
+    // The LLM must NOT be called — medication is a detected medical context.
+    expect(llmSpy).not.toHaveBeenCalled();
+    expect(res.highStakes).toBe(true);
+    expect(res.highStakesCategory).toBe('medical');
+    if (res.kind === 'candidates') {
+      for (const c of res.candidates) {
+        expect(c.sourceTag).toBe('therapist-approved');
+        expect(c.generated).toBeUndefined();
+      }
+    }
+  });
 });
