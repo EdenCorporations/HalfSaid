@@ -461,6 +461,15 @@ reason. Add to this list as deviations are made.
 | D8 | ASR/LLM available in **fixture/mock mode**; no live keys required for dev/CI | working agreements | CI must run green without secrets |
 | D9 | Auth via Supabase **email magic-link**, not GitHub OAuth | §31.1 | Avoids external OAuth app config for the demo (O1) |
 | D10 | Embeddings from a **hosted free embedder**; seed vectors **committed as fixtures**, query tests use cached/mocked embeddings | §14 | Keeps CI green without secrets while getting real semantic quality for the curated seed (O2) |
+| D11 | RLS is **owner-only** for MVP: an authenticated user reads only their own PCG (all tiers). Cross-user Tier 2 (family) / Tier 3 (clinician) sharing needs a grants/relationship model, deferred post-MVP | §13.4 | Single-user Maya demo; `privacy_tier` is stored and the RLS seam is ready for cross-user policies |
+| D12 | Seed embeddings are **NULL at seed time**, backfilled by the embedder in Phase 3 | §14 | The 200-node seed loads and is graph-complete without an embedding key; retrieval backfills (relates to D10) |
+| D13 | Data-layer tests (schema/bi-temporal/RLS/seed) run the real migrations on **PGlite** (Postgres compiled to WASM) instead of a Dockered Supabase stack; migrations stay Supabase-native | §24.4 | Docker-free, secret-free CI. Requires Jest with `NODE_OPTIONS=--experimental-vm-modules` (wired into `npm test`) |
+
+**Phase-2 enhancement beyond the PRD (not a deviation):** an **append-only trigger**
+on `pcg_nodes`/`pcg_edges` makes the bi-temporal "corrections supersede, never
+overwrite" rule (SPEC §4.4) a hard DB invariant — content columns are immutable once
+written; only `superseded_by` / `salience` / `weight` may change, and `embedding` is
+write-once (NULL → value) to permit the Phase-3 backfill.
 
 ---
 
