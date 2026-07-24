@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useSuggestions } from '@/lib/client/useSuggestions';
 import { useAsr } from '@/lib/client/useAsr';
 import { speak } from '@/lib/client/tts';
+import { logSpokenUtterance } from '@/lib/client/log';
 import { InputBar } from './InputBar';
 import { SuggestionCard } from './SuggestionCard';
 
@@ -73,6 +74,7 @@ export function ConversationCanvas() {
 
   function utter(text: string) {
     speak(text);
+    void logSpokenUtterance(text); // persist to the PCG for the conversation log
     setSpoken((s) => [text, ...s]);
     setStatus(`Spoke: ${text}`);
     inputRef.current?.focus();
