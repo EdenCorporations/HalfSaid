@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "@halfsaid/shared-types": ["packages/shared-types/src"],
+      "@halfsaid/safety-policy": ["packages/safety-policy/src"],
+      "@halfsaid/ui-tokens": ["packages/ui-tokens/src"]
+    }
+  },
+  "include": ["packages/**/*.ts", "scripts/**/*.mjs"],
+  "exclude": ["node_modules", "**/dist"]
+}

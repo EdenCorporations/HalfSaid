@@ -1,0 +1,20 @@
+{
+  "name": "@halfsaid/ui-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "description": "WCAG-audited design tokens (touch targets, confidence colors, source-tag colors).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

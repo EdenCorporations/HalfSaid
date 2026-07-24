@@ -1,0 +1,19 @@
+# deps & build output
+node_modules
+.next
+dist
+coverage
+*.tsbuildinfo
+
+# lockfiles (tool-owned formatting)
+package-lock.json
+
+# markdown docs keep their own formatting
+*.md
+docs/
+
+# local + supabase state
+.env*
+CLAUDE.md
+supabase/.temp
+supabase/.branches
