@@ -27,7 +27,9 @@ export async function handleTimeline(req: Request, deps: ApiDeps): Promise<Respo
   const topic = url.searchParams.get('topic');
   const emotion = url.searchParams.get('emotion');
   const language = url.searchParams.get('language');
+  const q = url.searchParams.get('q');
   const limit = Math.min(500, Math.max(1, Number(url.searchParams.get('limit')) || 100));
+  const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
 
   const params: unknown[] = [userId];
   const conds: string[] = [
@@ -39,6 +41,11 @@ export async function handleTimeline(req: Request, deps: ApiDeps): Promise<Respo
   if (language) {
     params.push(language);
     conds.push(`u.attributes->>'language' = $${params.length}`);
+  }
+  // Free-text search over the utterance content (conversation-log search box).
+  if (q) {
+    params.push(`%${q}%`);
+    conds.push(`u.attributes->>'content' ilike $${params.length}`);
   }
   // Each entity filter is an EXISTS over the relevant edge, matching by name/type.
   if (person) {
@@ -54,17 +61,21 @@ export async function handleTimeline(req: Request, deps: ApiDeps): Promise<Respo
     conds.push(mentionsExists('evokes', 'type', params.length));
   }
   params.push(limit);
+  const limitIdx = params.length;
+  params.push(offset);
+  const offsetIdx = params.length;
 
-  const rows = await exec<TimelineRow>(
+  const rows = await exec<TimelineRow & { total: number }>(
     `select u.id,
             u.event_time,
             u.attributes->>'mode' as modality,
             u.attributes->>'content' as summary,
-            u.privacy_tier
+            u.privacy_tier,
+            count(*) over ()::int as total
        from public.pcg_nodes u
       where ${conds.join(' and ')}
-      order by u.event_time desc
-      limit $${params.length};`,
+      order by u.event_time desc, u.id desc
+      limit $${limitIdx} offset $${offsetIdx};`,
     params,
   );
 
@@ -80,6 +91,8 @@ export async function handleTimeline(req: Request, deps: ApiDeps): Promise<Respo
         summary: r.summary ?? '',
         privacyTier: r.privacy_tier,
       })),
+      total: rows[0]?.total ?? 0,
+      offset,
     },
     200,
   );

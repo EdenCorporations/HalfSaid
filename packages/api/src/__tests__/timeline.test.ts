@@ -54,6 +54,32 @@ describe('GET /v1/pcg/timeline', () => {
     expect(data.items.length).toBeGreaterThan(0);
   });
 
+  it('searches utterance content with q (case-insensitive)', async () => {
+    h.setUser(MAYA);
+    const data = (await (
+      await handleTimeline(get('?q=SARAH&limit=100'), h.deps)
+    ).json()) as TimelineResponse;
+    expect(data.items.length).toBeGreaterThan(0);
+    expect(data.items.every((i) => /sarah/i.test(i.summary))).toBe(true);
+    expect(data.total).toBe(data.items.length);
+  });
+
+  it('paginates with offset and reports the pre-page total', async () => {
+    h.setUser(MAYA);
+    const page1 = (await (
+      await handleTimeline(get('?limit=5&offset=0'), h.deps)
+    ).json()) as TimelineResponse;
+    const page2 = (await (
+      await handleTimeline(get('?limit=5&offset=5'), h.deps)
+    ).json()) as TimelineResponse;
+    expect(page1.items).toHaveLength(5);
+    expect(page2.items).toHaveLength(5);
+    expect(page1.total!).toBeGreaterThan(10);
+    expect(page2.total).toBe(page1.total);
+    const ids1 = new Set(page1.items.map((i) => i.id));
+    expect(page2.items.every((i) => !ids1.has(i.id))).toBe(true);
+  });
+
   it('is RLS-scoped: another user sees an empty timeline', async () => {
     h.setUser('88888888-8888-4888-8888-888888888888');
     const data = (await (await handleTimeline(get(), h.deps)).json()) as TimelineResponse;

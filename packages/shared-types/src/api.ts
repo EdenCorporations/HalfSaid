@@ -94,7 +94,11 @@ export interface TimelineQuery {
   topic?: string;
   emotion?: string;
   language?: string;
+  /** Free-text search over utterance content. */
+  q?: string;
   limit?: number;
+  /** Pagination offset (with `limit`). */
+  offset?: number;
 }
 
 /** One Memory Timeline card. */
@@ -108,6 +112,39 @@ export interface TimelineItem {
 
 export interface TimelineResponse {
   items: TimelineItem[];
+  /** Total matches before limit/offset (for "load more"). */
+  total?: number;
+  offset?: number;
+}
+
+// --- GET /v1/pcg/graph -------------------------------------------------------
+
+/** One node of the PCG mini-map (SPEC §13). */
+export interface GraphNode {
+  id: string;
+  type: string;
+  label: string;
+  salience: number;
+  /** Connection count — the mini-map sizes hubs by this. */
+  degree: number;
+}
+
+export interface GraphEdge {
+  from: string;
+  to: string;
+  type: string;
+}
+
+/** Whole-graph counts (the PCG growth counter). */
+export interface GraphTotals {
+  nodes: number;
+  edges: number;
+}
+
+export interface GraphResponse {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  totals: GraphTotals;
 }
 
 /** Map a raw node row to its API DTO. */
