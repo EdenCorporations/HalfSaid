@@ -7,3 +7,4 @@
 export type { ApiDeps } from './deps';
 export { json, apiError, readJson, methodNotAllowed } from './http';
 export { handleSuggestions } from './handlers/suggestions';
+export { handleNodes } from './handlers/nodes';
