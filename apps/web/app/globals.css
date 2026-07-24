@@ -179,6 +179,35 @@
   }
 }
 
+/* ---- Print (clinician report → PDF) ---- */
+@media print {
+  :root {
+    color-scheme: light;
+  }
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  .app-noise::after,
+  .app-vignette::before {
+    display: none !important;
+  }
+  .print-hide {
+    display: none !important;
+  }
+  .print-report,
+  .print-report * {
+    color: #111111 !important;
+    border-color: #d4d4d8 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  .print-report a {
+    text-decoration: none;
+  }
+}
+
 /* Accessibility gate: honour reduced-motion everywhere. */
 @media (prefers-reduced-motion: reduce) {
   *,
