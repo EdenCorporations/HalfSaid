@@ -15,17 +15,16 @@ export function VoiceWave({ active = false, className }: { active?: boolean; cla
   const reduce = useReducedMotion();
 
   return (
-    <div aria-hidden="true" className={cn('flex h-10 items-center justify-center gap-1.5', className)}>
+    <div
+      aria-hidden="true"
+      className={cn('flex h-10 items-center justify-center gap-1.5', className)}
+    >
       {BARS.map((peak, i) => (
         <motion.span
           key={i}
           className="w-1.5 rounded-full bg-gradient-to-t from-[#7C3AED] to-[#A855F7]"
           initial={{ height: 6 }}
-          animate={
-            active && !reduce
-              ? { height: [6, 6 + peak * 30, 6] }
-              : { height: 6 }
-          }
+          animate={active && !reduce ? { height: [6, 6 + peak * 30, 6] } : { height: 6 }}
           transition={
             active && !reduce
               ? { duration: 0.9 + i * 0.05, repeat: Infinity, ease: 'easeInOut', delay: i * 0.06 }

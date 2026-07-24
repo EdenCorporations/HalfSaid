@@ -71,9 +71,12 @@ export function ConversationCanvas() {
     if (editing) editRef.current?.focus();
   }, [editing]);
 
-  useEffect(() => () => {
-    if (speakTimer.current) clearTimeout(speakTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (speakTimer.current) clearTimeout(speakTimer.current);
+    },
+    [],
+  );
 
   function requestFor(text: string) {
     setTranscript(text);
@@ -165,10 +168,7 @@ export function ConversationCanvas() {
         <section className="flex flex-col items-center gap-4 pt-2">
           <CompanionOrb state={orbState} size={220} />
 
-          <p
-            className="font-heading text-xl font-medium text-white"
-            aria-hidden="true"
-          >
+          <p className="font-heading text-xl font-medium text-white" aria-hidden="true">
             {statusLabel}
           </p>
 
@@ -202,8 +202,14 @@ export function ConversationCanvas() {
           {status}
         </div>
 
-        <section aria-label="Suggestions" aria-busy={loading} className="flex flex-1 flex-col gap-3">
-          {loading && <p className="text-center text-sm text-muted-foreground">Finding suggestions…</p>}
+        <section
+          aria-label="Suggestions"
+          aria-busy={loading}
+          className="flex flex-1 flex-col gap-3"
+        >
+          {loading && (
+            <p className="text-center text-sm text-muted-foreground">Finding suggestions…</p>
+          )}
           {error && (
             <p role="alert" className="text-sm text-destructive">
               Something went wrong: {error}

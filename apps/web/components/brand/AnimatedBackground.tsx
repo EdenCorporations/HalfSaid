@@ -7,10 +7,7 @@
  */
 export function AnimatedBackground() {
   return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-    >
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       {/* Base gradient wash. */}
       <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_-10%,#1E1B4B_0%,#121826_38%,#09090B_75%)]" />
 

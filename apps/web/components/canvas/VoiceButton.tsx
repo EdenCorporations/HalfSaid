@@ -18,7 +18,12 @@ export interface VoiceButtonProps {
  * carries a descriptive accessible name. Ripples are decorative and stop under
  * prefers-reduced-motion.
  */
-export function VoiceButton({ listening = false, busy = false, onClick, disabled }: VoiceButtonProps) {
+export function VoiceButton({
+  listening = false,
+  busy = false,
+  onClick,
+  disabled,
+}: VoiceButtonProps) {
   return (
     <div className="relative flex items-center justify-center">
       {/* Expanding ripples while listening. */}

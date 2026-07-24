@@ -29,11 +29,7 @@ export function GlassCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
       transition={{ type: 'spring', stiffness: 120, damping: 18, delay: index * 0.08 }}
-      className={cn(
-        strong ? 'glass-strong' : 'glass',
-        'rounded-2xl shadow-glow-soft',
-        className,
-      )}
+      className={cn(strong ? 'glass-strong' : 'glass', 'rounded-2xl shadow-glow-soft', className)}
       {...props}
     >
       {children}

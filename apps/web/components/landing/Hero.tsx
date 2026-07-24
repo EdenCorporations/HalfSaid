@@ -109,7 +109,10 @@ export function Hero() {
         >
           <span aria-hidden="true">🎤</span>
           Start Conversation
-          <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+          <ArrowRight
+            className="h-5 w-5 transition-transform group-hover:translate-x-1"
+            aria-hidden="true"
+          />
         </Link>
         <a
           href="#features"
@@ -122,7 +125,11 @@ export function Hero() {
       {/* Three glass cards. */}
       <div className="mt-20 grid w-full gap-5 sm:grid-cols-3">
         {CARDS.map((c, i) => (
-          <GlassCard key={c.title} index={i} className="flex flex-col items-center gap-3 p-7 text-center">
+          <GlassCard
+            key={c.title}
+            index={i}
+            className="flex flex-col items-center gap-3 p-7 text-center"
+          >
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-[#A855F7] shadow-glow-soft">
               <c.icon className="h-7 w-7" aria-hidden="true" />
             </span>
