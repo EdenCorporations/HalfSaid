@@ -22,6 +22,11 @@ major_version = 15
 [db.pooler]
 enabled = false
 
+[db.seed]
+# `supabase db reset` applies migrations then this seed (the synthetic Maya PCG).
+enabled = true
+sql_paths = ["./seed.sql"]
+
 [studio]
 enabled = true
 port = 54323
