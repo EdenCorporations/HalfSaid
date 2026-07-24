@@ -43,7 +43,40 @@ jobs:
       - name: License audit (fails on GPLv3 / AGPL / CPML / CC-BY-NC)
         run: npm run license-audit
 
-    # Gates added in later phases (SPEC §16):
-    #   - Snyk / Semgrep / Trivy security scans     — Phase 7
-    #   - Playwright E2E on the 3-minute demo path  — Phase 7
-    #   - 80% coverage enforcement                  — as suites grow
+      # Reuses the build above; playwright's webServer runs `next start` in mock mode.
+      - name: E2E (Playwright — the 3-minute demo path)
+        working-directory: apps/web
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test
+
+    # Still to add (SPEC §16): 80% coverage enforcement as suites grow.
+
+  security:
+    name: security scan (semgrep + trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Static analysis over public rulesets — no token needed.
+      - name: Semgrep
+        run: |
+          python -m pip install --quiet semgrep
+          semgrep scan --config p/typescript --config p/react --config p/security-audit --error
+
+      # Dependency / filesystem vulnerability scan.
+      - name: Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+      # Snyk is optional — only runs if a SNYK_TOKEN secret is configured.
+      - name: Snyk (optional)
+        if: ${{ secrets.SNYK_TOKEN != '' }}
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

@@ -469,6 +469,7 @@ reason. Add to this list as deviations are made.
 | D16 | `/v1/*` handlers are framework-agnostic (`Request`→`Response`) with **auth + DB executor injected**; the Next.js routes wire them. In **mock mode** the DB is a single in-memory **PGlite** (migrations+seed+embeddings) and auth is a header/demo-user; the **real per-request Postgres executor is stubbed** (throws unless mock mode) | §12, §24.1 | Whole API runs offline without Supabase for the demo/CI; real Postgres + JWT wiring is a deploy concern (Phase 7). Mock DB shares one session, so it is single-user only |
 | D17 | ASR is **record-then-transcribe** (near-real-time) via a `/api/v1/asr` proxy to Groq Whisper large-v3, not token-by-token streaming | §16 | MediaRecorder + a single Groq transcription call is enough for the demo; the streaming/chunked pipeline is post-MVP. Verified round-trip: speech → route → correct transcript |
 | D18 | **Real Supabase** is now wired: schema + seed applied via `scripts/apply-supabase.mjs` over the **IPv4 session pooler** (direct `db.<ref>` host is IPv6-only); the real per-request RLS-scoped `pg` executor replaces the D16 stub. The demo still authenticates as Maya (mock auth) over the real DB; full JWT sign-in is post-MVP | §12, §24.1 | Real persistent Postgres for the demo; the mock PGlite DB remains the secret-free fallback for dev/CI |
+| D19 | **Deploy target is a Node host, not Cloudflare Pages/Workers** for now. The API is Node-runtime (`pg` over TCP, `node:fs`, PGlite/WASM), which `@cloudflare/next-on-pages` (Edge-only) can't build. A real Cloudflare port needs `@opennextjs/cloudflare` + a Workers-safe Postgres path — tracked in [docs/DEPLOY.md](DEPLOY.md) | §11.1, §24.1 | The MVP is verified end-to-end locally + in Playwright; the Cloudflare adaptation is post-MVP work, not a blocker for the demo |
 
 **Phase-2 enhancement beyond the PRD (not a deviation):** an **append-only trigger**
 on `pcg_nodes`/`pcg_edges` makes the bi-temporal "corrections supersede, never
@@ -575,18 +576,21 @@ without Groq/Gemini credentials, and CI runs green without secrets.
 
 ## 16. CI pipeline `[PRD §24.3]`
 
-GitHub Actions on every PR:
+GitHub Actions on every PR (`.github/workflows/ci.yml`), all runnable **without
+secrets** (mock mode). Implemented ✅ / planned ✗:
 
-1. **Lint** — ESLint + Prettier (+ Black/hadolint where Python/Docker exist).
-2. **Unit tests** — Jest (frontend) / pytest (backend), **80% coverage required**.
-3. **Integration tests** — Supabase local + seed data + API tests (incl. **RLS
-   tier tests**).
-4. **Accessibility** — **axe-core, zero violations required**.
-5. **Security scan** — Snyk (deps) · Semgrep (code) · Trivy (containers).
-6. **License audit** — **custom script that fails on GPLv3 / AGPL / CPML /
-   CC-BY-NC** dependencies ([§9](#9-license-bans)).
-7. **Build** — app build + Cloudflare Pages preview.
-8. **E2E** — Playwright on critical paths (the 3-minute demo path).
+1. ✅ **Build** — runs first so `next build` generates the types the typecheck needs.
+2. ✅ **Typecheck** — `tsc --noEmit` across all workspaces.
+3. ✅ **Lint** — Prettier + ESLint.
+4. ✅ **Unit + integration tests** — Jest, incl. the PGlite RLS/bi-temporal/seed suites
+   and API handler tests. (80% coverage enforcement is still ✗, added as suites grow.)
+5. ✅ **Accessibility** — `test:a11y` (jest-axe), **zero violations required**.
+6. ✅ **License audit** — custom script, fails on GPLv3 / AGPL / CPML / CC-BY-NC.
+7. ✅ **E2E** — Playwright on the 3-minute demo path (`next start`, mock mode).
+8. ✅ **Security scan** — Semgrep + Trivy (a parallel job; Snyk optional if
+   `SNYK_TOKEN` is set).
+9. ✗ **Deploy** — Cloudflare Pages preview is deferred; the app targets a Node host
+   (deviation D19, [docs/DEPLOY.md](DEPLOY.md)).
 
 ---
 

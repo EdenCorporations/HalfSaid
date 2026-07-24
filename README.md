@@ -550,14 +550,21 @@ python -m services.worker.reflection --once   # trigger reflection manually
 ### 9.5 Common tasks
 
 ```bash
-supabase migration new <name>     # create a migration
-supabase db push                  # apply to linked project
-npm run test                      # Jest + pytest
+npm run dev                       # run the web app (next dev)
+npm run build                     # build all workspaces
+npm run typecheck                 # tsc --noEmit across workspaces
+npm run lint                      # Prettier + ESLint
+npm test                          # Jest (RLS/bi-temporal/seed + retrieval + API)
 npm run test:a11y                 # axe-core - zero violations required
-npm run test:e2e                  # Playwright against staging preview
-k6 run tests/load/conversation.js # load test
-tofu -chdir=infra/tofu plan       # preview infra changes
+npm run test:e2e -w apps/web      # Playwright - the 3-minute demo path (builds first)
+npm run license-audit             # fails on GPLv3 / AGPL / CPML / CC-BY-NC
+node scripts/apply-supabase.mjs   # apply migrations + Maya seed to real Supabase
 ```
+
+> **Run modes.** With no secrets, the app uses an in-memory mock DB (PGlite) seeded
+> with Maya — everything works offline, and CI runs this way. Fill `.env` from
+> `.env.example` (Supabase pooler + `GROQ_API_KEY`) to use real Supabase + Groq ASR.
+> Hosting notes are in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ---
 
