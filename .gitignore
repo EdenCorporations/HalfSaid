@@ -3,6 +3,9 @@ docs/*.pdf
 docs/PRD_v1.0.md
 docs/.derived/
 
+# Local operating brief — kept on disk for local use, not tracked
+CLAUDE.md
+
 # standard
 node_modules/
 .env*
