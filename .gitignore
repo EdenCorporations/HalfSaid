@@ -1,0 +1,15 @@
+# PRD source — confidential, never committed
+docs/*.pdf
+docs/.derived/
+
+# standard
+node_modules/
+.env*
+!.env.example
+.next/
+dist/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+.supabase/
