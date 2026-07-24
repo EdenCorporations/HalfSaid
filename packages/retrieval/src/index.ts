@@ -16,3 +16,19 @@ export {
 } from './embeddings';
 export type { Embedder, BackfillResult } from './embeddings';
 export type { SqlExecutor } from './sql';
+
+export { retrieve, prelimScore, type RetrieveOptions } from './retrieve';
+export {
+  contentTokens,
+  semanticSearch,
+  keywordSearch,
+  subgraphSearch,
+  priorSearch,
+  type RawHit,
+} from './store';
+export {
+  sourceTagForTier,
+  type SuggestionContext,
+  type RetrievedCandidate,
+  type RetrievalScores,
+} from './types';
