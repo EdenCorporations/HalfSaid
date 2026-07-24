@@ -23,7 +23,7 @@ export function ConfidenceBar({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuetext={`${pct}% — ${token.label}`}
-        className="h-2 w-full overflow-hidden rounded-full bg-muted"
+        className="h-2 w-full overflow-hidden rounded-full bg-white/10"
       >
         <div
           className="h-full rounded-full"
