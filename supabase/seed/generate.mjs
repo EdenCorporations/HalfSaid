@@ -41,11 +41,21 @@ const nodes = []; // { id, type, attrs, tier, daysAgo }
 const edges = []; // { type, from, to, attrs? }
 const slug = {}; // slug -> id
 
-function addNode(key, type, attrs, tier = 1, daysAgo = 30) {
+function addNode(key, type, attrs, tier = 1, daysAgo = 30, salience = 0.5) {
   const id = nextId();
   if (key) slug[key] = id;
-  nodes.push({ id, type, attrs, tier, daysAgo });
+  nodes.push({ id, type, attrs, tier, daysAgo, salience });
   return id;
+}
+
+// Salience models how central an utterance is to Maya's daily communication, so the
+// predictive-prior retrieval source surfaces her most-used phrases. The three demo
+// candidates are her most salient requests (SPEC §2, PRD §13.6).
+const DEMO = new Set(['call Sarah', 'go to the garden', 'read my book']);
+function salienceFor(content, intentKey) {
+  if (DEMO.has(content)) return 0.97;
+  if (DEMO.has(content.replace(/^i want to /i, ''))) return 0.85;
+  return intentKey === 'request' ? 0.65 : 0.5;
 }
 function addEdge(type, from, to, attrs = null, daysAgo = 30) {
   if (!from || !to) throw new Error(`edge ${type} missing endpoint`);
@@ -289,6 +299,7 @@ padded.forEach((u, i) => {
     { content, mode, speaker: 'Maya', language: 'en', asr_score: null },
     tier,
     27 - (i % 25),
+    salienceFor(content, intentK),
   );
   // Wire provenance edges so retrieval + subgraph traversal have signal.
   addEdge('expresses', slug[key], slug[intentK]);
@@ -337,13 +348,13 @@ lines.push(
   `  (${s(MAYA)}, 'Maya', '1948-04-12', '{en}', '{"Broca''s aphasia"}', '{"reading":"intact","speech":"non-fluent"}'::jsonb)`,
   '  on conflict (id) do nothing;',
   '',
-  'insert into public.pcg_nodes (id, user_id, node_type, attributes, event_time, privacy_tier) values',
+  'insert into public.pcg_nodes (id, user_id, node_type, attributes, event_time, privacy_tier, salience) values',
 );
 lines.push(
   nodes
     .map(
       (n) =>
-        `  (${s(n.id)}, ${s(MAYA)}, ${s(n.type)}, ${jb(n.attrs)}, ${eventTime(n.daysAgo)}, ${n.tier})`,
+        `  (${s(n.id)}, ${s(MAYA)}, ${s(n.type)}, ${jb(n.attrs)}, ${eventTime(n.daysAgo)}, ${n.tier}, ${n.salience})`,
     )
     .join(',\n') + ';',
 );

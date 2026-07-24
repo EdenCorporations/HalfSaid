@@ -10,6 +10,7 @@ export {
   HardRuleViolation,
   CONFIDENCE,
   gateFor,
+  explanationForSourceTag,
   buildCandidate,
   assertGrounded,
 } from './candidate';

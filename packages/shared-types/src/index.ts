@@ -131,6 +131,12 @@ export interface SuggestionCandidate {
   /** Gate the confidence fell into (SPEC §7.2); only `ship`/`sandbox` reach here. */
   readonly gate: Exclude<ConfidenceGate, 'refuse'>;
   readonly provenance: Provenance;
+  /**
+   * Provenance-derived, one-line explanation (SPEC §8). Derived from the source tag
+   * — NOT a generated, plausible-sounding reason. The cited PCG ids live in
+   * `provenance`.
+   */
+  readonly explanation: string;
 }
 
 /**

@@ -452,7 +452,7 @@ reason. Add to this list as deviations are made.
 | # | Deviation | PRD ref | Reason |
 |---|---|---|---|
 | D1 | Cross-encoder re-rank (step 3) replaced with a cheaper scorer (e.g. cosine + BM25 blend) for MVP | §17.1 | No fine-tuned cross-encoder in 48h; the seam stays so it can be swapped in |
-| D2 | Confidence calibration (Platt/isotonic, weekly ECE recalibration) approximated with a fixed weighted geometric mean | §22.2 | No accept/reject history at demo time to calibrate against |
+| D2 | Confidence calibration (Platt/isotonic, weekly ECE recalibration) approximated with a fixed weighted geometric mean; each input is floored (0.4) so one weak signal can't zero the score; generation log-prob is a fixed proxy (constrained items are high) | §22.2 | No accept/reject history and no LLM decoder at demo time |
 | D3 | Privacy-tier enforcement via RLS only; per-row encryption-key derivation not implemented | §13.4 | RLS proves the visibility guarantee (incl. "no admin reads Tier 1") without the key-management build-out |
 | D4 | High-stakes context **detection** not implemented; interception seam + forced-flag test only | §22.4 | MVP scope explicitly stubs detection; seam is what must exist |
 | D5 | `supersedes` / `known_at` modeled via `superseded_by` / `ingestion_time` columns rather than materialized edges | §13.2–13.3 | Column form is sufficient for MVP correction/audit; edge enum retained for full model |
@@ -464,6 +464,8 @@ reason. Add to this list as deviations are made.
 | D11 | RLS is **owner-only** for MVP: an authenticated user reads only their own PCG (all tiers). Cross-user Tier 2 (family) / Tier 3 (clinician) sharing needs a grants/relationship model, deferred post-MVP | §13.4 | Single-user Maya demo; `privacy_tier` is stored and the RLS seam is ready for cross-user policies |
 | D12 | Seed embeddings are **NULL at seed time**, backfilled by the embedder in Phase 3 | §14 | The 200-node seed loads and is graph-complete without an embedding key; retrieval backfills (relates to D10) |
 | D13 | Data-layer tests (schema/bi-temporal/RLS/seed) run the real migrations on **PGlite** (Postgres compiled to WASM) instead of a Dockered Supabase stack; migrations stay Supabase-native | §24.4 | Docker-free, secret-free CI. Requires Jest with `NODE_OPTIONS=--experimental-vm-modules` (wired into `npm test`) |
+| D14 | Dev/CI embeddings use a **deterministic bag-of-words `MockEmbedder`** (1024-d); the hosted embedder (D10) is a placeholder not exercised without a key | §14 | No embedding key in CI; BoW gives enough token-overlap signal over the curated seed |
+| D15 | A **4th retrieval source — a predictive salience/recency prior** (PRD §13.6) — is added alongside semantic/subgraph/keyword so a generic opener ("I want to…") surfaces habitual phrases; near-variants are de-duplicated | §17.1 | Pure semantic/keyword can't connect a bare opener to "call Sarah"; the prior is how the demo three emerge without hardcoding |
 
 **Phase-2 enhancement beyond the PRD (not a deviation):** an **append-only trigger**
 on `pcg_nodes`/`pcg_edges` makes the bi-temporal "corrections supersede, never
