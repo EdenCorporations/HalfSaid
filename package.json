@@ -18,7 +18,7 @@
     "lint": "prettier --check . && npm run lint --workspaces --if-present",
     "format": "prettier --write .",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:a11y": "npm run test:a11y --workspace=apps/web --if-present",
+    "test:a11y": "jest --selectProjects web",
     "test:e2e": "npm run test:e2e --workspace=apps/web --if-present",
     "license-audit": "node scripts/license-audit.mjs"
   },
