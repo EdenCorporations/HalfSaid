@@ -49,6 +49,14 @@ fails the build if that path ever opens.
 paraphasia resolution, semantic-similarity scoring, and translation of
 already-approved items. Never for producing user-facing text.
 
+> **⚠️ CURRENT MVP DEVIATES FROM THIS (deviation [D20](#11-known-deviations)).** By
+> owner decision (2026-07-24), the running MVP **generates user-facing suggestions
+> with the LLM**, using the PCG as *context* rather than a strict word-source, so it
+> stays useful on a cold/sparse graph. The constrained-decoding machinery in
+> `packages/safety-policy` is retained as the no-key / high-stakes fallback. This
+> text records the original, safer design — which a real clinical deployment must
+> restore. See D20 for the full rationale and the safety tradeoff.
+
 ### Rule 2 — Scope is fixed and small
 
 Build **only** the MVP in `[PRD §31.1]` (enumerated in [§2](#2-mvp-scope)). The PRD
@@ -470,6 +478,7 @@ reason. Add to this list as deviations are made.
 | D17 | ASR is **record-then-transcribe** (near-real-time) via a `/api/v1/asr` proxy to Groq Whisper large-v3, not token-by-token streaming | §16 | MediaRecorder + a single Groq transcription call is enough for the demo; the streaming/chunked pipeline is post-MVP. Verified round-trip: speech → route → correct transcript |
 | D18 | **Real Supabase** is now wired: schema + seed applied via `scripts/apply-supabase.mjs` over the **IPv4 session pooler** (direct `db.<ref>` host is IPv6-only); the real per-request RLS-scoped `pg` executor replaces the D16 stub. The demo still authenticates as Maya (mock auth) over the real DB; full JWT sign-in is post-MVP | §12, §24.1 | Real persistent Postgres for the demo; the mock PGlite DB remains the secret-free fallback for dev/CI |
 | D19 | **Deploy target is a Node host, not Cloudflare Pages/Workers** for now. The API is Node-runtime (`pg` over TCP, `node:fs`, PGlite/WASM), which `@cloudflare/next-on-pages` (Edge-only) can't build. A real Cloudflare port needs `@opennextjs/cloudflare` + a Workers-safe Postgres path — tracked in [docs/DEPLOY.md](DEPLOY.md) | §11.1, §24.1 | The MVP is verified end-to-end locally + in Playwright; the Cloudflare adaptation is post-MVP work, not a blocker for the demo |
+| **D20** | **The Hard Rule is relaxed to RAG-grounded generation (owner decision).** User-facing suggestions are now **written by the LLM** (Groq Llama 3.3 70B) using retrieved PCG items as *context/information*, not constrained-decoded verbatim from PCG items. Grounding is **optional** (cold-start safe); the PCG grows via ingestion (`/v1/pcg/ingest` LLM-extracts entities into new nodes+edges). The constrained-decoding path (`buildCandidate`) remains as the **no-key and high-stakes fallback**, and its tests still pass. | §0 Rule 1, §22.1, §12.3 #4 | The constrained-only path returned the same salient items for every input (unusable) and crumbled on a cold/sparse PCG. **⚠️ Safety:** this reintroduces exactly the free-form hallucination risk the PRD's Hard Rule exists to prevent — words the aphasia user can't verify, in their voice. Accepted for the synthetic-persona demo; **a real clinical deployment must restore constrained decoding + clinical review** (see §0). |
 
 **Phase-2 enhancement beyond the PRD (not a deviation):** an **append-only trigger**
 on `pcg_nodes`/`pcg_edges` makes the bi-temporal "corrections supersede, never
