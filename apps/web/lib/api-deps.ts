@@ -96,6 +96,8 @@ export function getApiDeps(): ApiDeps {
     resolveUserId,
     executorFor,
     embedder: getEmbedder(),
+    // When a Groq key is present the LLM writes the suggestions (D20).
+    llmApiKey: process.env.GROQ_API_KEY,
     now: () => Math.floor(Date.now() / 1000),
   };
 }

@@ -1,13 +1,16 @@
 /**
- * End-to-end suggestion (SPEC §5–§8). Orchestrates the pipeline into a
- * SuggestionsResponse:
+ * End-to-end suggestion (SPEC §5–§8, deviation D20).
  *
- *   retrieve -> rank -> confidence + gate -> constrained generation -> response
+ * Primary path (when a Groq key is available): retrieve PCG items as CONTEXT, then
+ * the LLM writes short first-person sentences grounded in that context — it works on
+ * a cold start with little or no PCG, and the PCG is used as information, not a
+ * word-whitelist.
  *
- * The Hard Rule (SPEC §0, §8) is upheld structurally: every candidate is built ONLY
- * via @halfsaid/safety-policy's buildCandidate from a PCG source item. When nothing
- * clears the 0.5 confidence floor, the first-class refusal path fires (SPEC §7.2) —
- * that is correct behaviour, not an error.
+ * Fallback path (no key, e.g. CI/offline): constrained decoding straight from PCG
+ * items via @halfsaid/safety-policy's buildCandidate — the original safe behaviour.
+ *
+ * High-stakes contexts (SPEC §7.3) always use the constrained fallback, never
+ * free generation. When nothing surfaces, the first-class refusal path fires.
  */
 
 import { buildCandidate, assertGrounded } from '@halfsaid/safety-policy';
@@ -17,6 +20,7 @@ import { getEmbedder, type Embedder } from './embeddings';
 import { retrieve } from './retrieve';
 import { rank, INITIAL_WEIGHTS, type RankerWeights } from './ranker';
 import { scoreConfidence, toSourceItem } from './confidence';
+import { generateSuggestions } from './llm';
 import type { SqlExecutor } from './sql';
 import type { SuggestionContext } from './types';
 
@@ -27,9 +31,22 @@ export interface SuggestOptions {
   nowEpoch?: number;
   /** Max cards to surface (SPEC §13 cognitive-load budget). */
   maxCards?: number;
+  /** Groq key — when set, the LLM writes the suggestions (D20). */
+  groqApiKey?: string;
+  llmModel?: string;
+  /** Injectable fetch for tests. */
+  fetchImpl?: typeof fetch;
 }
 
 const REFUSAL_ALTERNATIVES = ['Type it out', 'Switch input mode', 'Ask your SLP'];
+
+function refusal(): SuggestionsResponse {
+  return {
+    kind: 'refusal',
+    reason: "I don't have a confident suggestion.",
+    alternatives: REFUSAL_ALTERNATIVES,
+  };
+}
 
 export async function suggest(
   exec: SqlExecutor,
@@ -41,42 +58,45 @@ export async function suggest(
   const nowEpoch = options.nowEpoch ?? Math.floor(Date.now() / 1000);
   const maxCards = options.maxCards ?? 5;
 
-  // Steps 1–4: retrieve a shortlist (policy-filtered, incl. high-stakes).
-  const retrieved = await retrieve(exec, ctx, embedder, { topK: 20 });
+  // Retrieve PCG items — as generation context (primary) or as the candidate pool
+  // (fallback). Policy filters (incl. high-stakes) already applied.
+  const retrieved = await retrieve(exec, ctx, embedder, { topK: 12 });
 
-  // Step 6: rank the whole shortlist; step 5: score + gate each, drop refusals.
+  // Primary: LLM writes the sentences, grounded in retrieved context. Not used for
+  // high-stakes, which stays on the constrained path.
+  if (options.groqApiKey && !ctx.highStakes) {
+    try {
+      const generated = await generateSuggestions(ctx, retrieved, {
+        apiKey: options.groqApiKey,
+        model: options.llmModel,
+        count: maxCards,
+        fetchImpl: options.fetchImpl,
+      });
+      const cards = generated.slice(0, maxCards);
+      if (cards.length > 0) return { kind: 'candidates', candidates: cards };
+      // LLM returned nothing usable — fall through to the constrained path.
+    } catch {
+      // LLM/network failure — fall back to constrained retrieval below.
+    }
+  }
+
+  // Fallback: constrained decoding straight from PCG items.
   const ranked = rank(retrieved, ctx, weights, nowEpoch, retrieved.length);
   const kept = ranked.map(scoreConfidence).filter((s) => s.gate !== 'refuse');
-
-  if (kept.length === 0) {
-    return {
-      kind: 'refusal',
-      reason: "I don't have a confident suggestion.",
-      alternatives: REFUSAL_ALTERNATIVES,
-    };
-  }
+  if (kept.length === 0) return refusal();
 
   const candidates: SuggestionCandidate[] = [];
   for (const scored of kept.slice(0, maxCards)) {
-    // Constrained generation: the ONLY path from a PCG item to a user-facing card.
     const candidate = buildCandidate({
       sourceItems: [toSourceItem(scored.ranked)],
       mode: scored.ranked.candidate.mode,
       confidence: scored.confidence,
       edgeIds: [],
     });
-    if (!candidate) continue; // below the sandbox floor — should not happen post-filter
-    assertGrounded(candidate); // hallucination check (SPEC §8): must cite ≥1 PCG id
+    if (!candidate) continue;
+    assertGrounded(candidate);
     candidates.push(candidate);
   }
 
-  if (candidates.length === 0) {
-    return {
-      kind: 'refusal',
-      reason: "I don't have a confident suggestion.",
-      alternatives: REFUSAL_ALTERNATIVES,
-    };
-  }
-
-  return { kind: 'candidates', candidates };
+  return candidates.length > 0 ? { kind: 'candidates', candidates } : refusal();
 }

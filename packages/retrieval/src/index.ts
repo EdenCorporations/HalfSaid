@@ -54,3 +54,5 @@ export {
   type Scored,
 } from './confidence';
 export { suggest, type SuggestOptions } from './suggest';
+export { generateSuggestions, type LlmGenOptions } from './llm';
+export { extractEntities, type ExtractedEntities, type ExtractOptions } from './extract';

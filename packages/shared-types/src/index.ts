@@ -132,11 +132,16 @@ export interface SuggestionCandidate {
   readonly gate: Exclude<ConfidenceGate, 'refuse'>;
   readonly provenance: Provenance;
   /**
-   * Provenance-derived, one-line explanation (SPEC §8). Derived from the source tag
-   * — NOT a generated, plausible-sounding reason. The cited PCG ids live in
-   * `provenance`.
+   * One-line explanation (SPEC §8). For retrieved candidates this is provenance-
+   * derived (from the source tag); for LLM-generated candidates it notes the
+   * grounding. The cited PCG ids always live in `provenance`.
    */
   readonly explanation: string;
+  /**
+   * True when the text was composed by the LLM (grounded in the cited PCG items,
+   * RAG-style) rather than taken verbatim from a PCG item. See SPEC deviation D20.
+   */
+  readonly generated?: boolean;
 }
 
 /**

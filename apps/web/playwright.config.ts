@@ -30,6 +30,8 @@ export default defineConfig({
     url: 'http://localhost:3210/canvas',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { HALFSAID_MOCK_MODE: 'true', SUPABASE_DB_HOST: '' },
+    // GROQ_API_KEY='' forces the deterministic constrained path (the LLM path
+    // generates non-deterministic sentences, which can't be asserted).
+    env: { HALFSAID_MOCK_MODE: 'true', SUPABASE_DB_HOST: '', GROQ_API_KEY: '' },
   },
 });
