@@ -72,13 +72,13 @@ export function FcmTrendChart() {
           <polyline
             points={line}
             fill="none"
-            stroke="#059669"
+            stroke="#34D399"
             strokeWidth="2.5"
             strokeLinejoin="round"
             strokeLinecap="round"
           />
           {MOCK_FCM.map((d, i) => (
-            <circle key={d.week} cx={x(i)} cy={y(d.score)} r="3.5" fill="#059669" />
+            <circle key={d.week} cx={x(i)} cy={y(d.score)} r="3.5" fill="#34D399" />
           ))}
         </svg>
 

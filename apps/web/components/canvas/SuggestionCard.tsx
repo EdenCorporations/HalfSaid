@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, Pencil, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import type { SuggestionCandidate } from '@halfsaid/shared-types';
 
 import { Button } from '@/components/ui/button';
@@ -26,44 +27,56 @@ export interface SuggestionCardProps {
  */
 export function SuggestionCard({ candidate, onAccept, onEdit, onReject }: SuggestionCardProps) {
   return (
-    <Card role="group" aria-label={`Suggestion: ${candidate.text}`} className="w-full">
-      <CardContent className="flex flex-col gap-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-xl font-semibold leading-snug">{candidate.text}</p>
-          <SourceTagBadge tag={candidate.sourceTag} />
-        </div>
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ type: 'spring', stiffness: 200, damping: 22 }}
+    >
+      <Card
+        role="group"
+        aria-label={`Suggestion: ${candidate.text}`}
+        className="w-full transition-shadow hover:shadow-glow"
+      >
+        <CardContent className="flex flex-col gap-3 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-xl font-semibold leading-snug text-white">{candidate.text}</p>
+            <SourceTagBadge tag={candidate.sourceTag} />
+          </div>
 
-        <ConfidenceBar confidence={candidate.confidence} gate={candidate.gate} />
+          <ConfidenceBar confidence={candidate.confidence} gate={candidate.gate} />
 
-        <p className="text-xs text-muted-foreground">{candidate.explanation}</p>
+          <p className="text-xs text-muted-foreground">{candidate.explanation}</p>
 
-        <div className="flex items-center gap-2">
-          <Button
-            className="flex-1"
-            aria-label={`Accept and speak: ${candidate.text}`}
-            onClick={() => onAccept(candidate)}
-          >
-            <Check aria-hidden="true" className="h-5 w-5" />
-            Accept
-          </Button>
-          <Button
-            variant="outline"
-            aria-label={`Edit before speaking: ${candidate.text}`}
-            onClick={() => onEdit(candidate)}
-          >
-            <Pencil aria-hidden="true" className="h-5 w-5" />
-            Edit
-          </Button>
-          <Button
-            variant="ghost"
-            aria-label={`Dismiss suggestion: ${candidate.text}`}
-            onClick={() => onReject(candidate)}
-          >
-            <X aria-hidden="true" className="h-5 w-5" />
-            Dismiss
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex items-center gap-2">
+            <Button
+              className="flex-1"
+              aria-label={`Accept and speak: ${candidate.text}`}
+              onClick={() => onAccept(candidate)}
+            >
+              <Check aria-hidden="true" className="h-5 w-5" />
+              Accept
+            </Button>
+            <Button
+              variant="outline"
+              aria-label={`Edit before speaking: ${candidate.text}`}
+              onClick={() => onEdit(candidate)}
+            >
+              <Pencil aria-hidden="true" className="h-5 w-5" />
+              Edit
+            </Button>
+            <Button
+              variant="ghost"
+              aria-label={`Dismiss suggestion: ${candidate.text}`}
+              onClick={() => onReject(candidate)}
+            >
+              <X aria-hidden="true" className="h-5 w-5" />
+              Dismiss
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
