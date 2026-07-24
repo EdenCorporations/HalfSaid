@@ -8,7 +8,7 @@
  * persists the utterance.
  */
 
-import { extractEntities } from '@halfsaid/retrieval';
+import { extractEntities, toVectorLiteral, type Embedder } from '@halfsaid/retrieval';
 import type { SqlExecutor } from '@halfsaid/retrieval';
 import type { NodeType } from '@halfsaid/shared-types';
 
@@ -18,6 +18,16 @@ import { apiError, json, methodNotAllowed, readJson } from '../http';
 interface IngestBody {
   content: string;
   mode?: string;
+}
+
+/** Best-effort embedding — a network failure must never block ingest. */
+async function tryEmbed(embedder: Embedder | undefined, text: string): Promise<string | null> {
+  if (!embedder) return null;
+  try {
+    return toVectorLiteral(await embedder.embed(text));
+  } catch {
+    return null;
+  }
 }
 
 export async function handleIngest(req: Request, deps: ApiDeps): Promise<Response> {
@@ -32,9 +42,13 @@ export async function handleIngest(req: Request, deps: ApiDeps): Promise<Respons
     return apiError('content (non-empty string) is required', 400);
   }
 
+  // Embed at ingest time so new utterances are immediately reachable by semantic
+  // retrieval (the embedding column is write-once; inserting it up front is the
+  // only mutation-free way in).
+  const uttVec = await tryEmbed(deps.embedder, body.content);
   const utt = await exec<{ id: string }>(
-    `insert into public.pcg_nodes (user_id, node_type, attributes, event_time, privacy_tier)
-       values ($1, 'Utterance', $2::jsonb, now(), 2)
+    `insert into public.pcg_nodes (user_id, node_type, attributes, event_time, privacy_tier, embedding)
+       values ($1, 'Utterance', $2::jsonb, now(), 2, $3::vector)
        returning id;`,
     [
       userId,
@@ -43,6 +57,7 @@ export async function handleIngest(req: Request, deps: ApiDeps): Promise<Respons
         mode: body.mode ?? 'full_utterance',
         source: 'spoken',
       }),
+      uttVec,
     ],
   );
   const utteranceId = utt[0]!.id;
@@ -59,7 +74,7 @@ export async function handleIngest(req: Request, deps: ApiDeps): Promise<Respons
       ];
       for (const [nodeType, edgeType, names] of groups) {
         for (const name of names) {
-          const entityId = await upsertNamed(exec, userId, nodeType, name);
+          const entityId = await upsertNamed(exec, userId, nodeType, name, deps.embedder);
           await exec(
             `insert into public.pcg_edges (user_id, edge_type, from_id, to_id, event_time)
                values ($1, $2, $3, $4, now());`,
@@ -76,12 +91,13 @@ export async function handleIngest(req: Request, deps: ApiDeps): Promise<Respons
   return json({ utteranceId, linked }, 201);
 }
 
-/** Find a same-named node for this user, or create one; returns its id. */
+/** Find a same-named node for this user, or create one (embedded); returns its id. */
 async function upsertNamed(
   exec: SqlExecutor,
   userId: string,
   nodeType: NodeType,
   name: string,
+  embedder?: Embedder,
 ): Promise<string> {
   const found = await exec<{ id: string }>(
     `select id from public.pcg_nodes
@@ -92,11 +108,12 @@ async function upsertNamed(
   );
   if (found[0]) return found[0].id;
 
+  const vec = await tryEmbed(embedder, name);
   const created = await exec<{ id: string }>(
-    `insert into public.pcg_nodes (user_id, node_type, attributes, event_time, privacy_tier)
-       values ($1, $2, $3::jsonb, now(), 2)
+    `insert into public.pcg_nodes (user_id, node_type, attributes, event_time, privacy_tier, embedding)
+       values ($1, $2, $3::jsonb, now(), 2, $4::vector)
        returning id;`,
-    [userId, nodeType, JSON.stringify({ name })],
+    [userId, nodeType, JSON.stringify({ name }), vec],
   );
   return created[0]!.id;
 }

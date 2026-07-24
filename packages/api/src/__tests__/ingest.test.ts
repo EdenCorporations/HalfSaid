@@ -42,12 +42,15 @@ describe('POST /v1/pcg/ingest', () => {
     expect(data.linked).toBe(0);
 
     await t.become({ kind: 'postgres' });
-    const rows = await t.query<{ c: string }>(
-      `select attributes->>'content' as c from public.pcg_nodes
+    const rows = await t.query<{ c: string; embedded: boolean }>(
+      `select attributes->>'content' as c, (embedding is not null) as embedded
+         from public.pcg_nodes
         where node_type = 'Utterance' and attributes->>'content' = $1;`,
       [phrase],
     );
     expect(rows).toHaveLength(1);
+    // Ingest-time embedding: the new utterance is immediately semantically reachable.
+    expect(rows[0]!.embedded).toBe(true);
   });
 
   it('400 on empty content, 401 unauthenticated, 405 on non-POST', async () => {

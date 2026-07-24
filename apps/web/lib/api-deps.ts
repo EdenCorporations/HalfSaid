@@ -34,6 +34,8 @@ function getMockDb(): Promise<TestDb> {
         withSeed: true,
         migrationsDir: join(repoRoot, 'supabase', 'migrations'),
         seedFile: join(repoRoot, 'supabase', 'seed.sql'),
+        // Second demo persona (David) — persona switching needs both graphs.
+        extraSeedFiles: [join(repoRoot, 'supabase', 'seed-david.sql')],
       });
       await t.become({ kind: 'postgres' });
       await backfillEmbeddings((sql, p) => t.query(sql, p), getEmbedder());
