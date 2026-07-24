@@ -7,6 +7,7 @@ import { MAX_SUGGESTION_CARDS } from '@halfsaid/ui-tokens';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSuggestions } from '@/lib/client/useSuggestions';
+import { useAsr } from '@/lib/client/useAsr';
 import { speak } from '@/lib/client/tts';
 import { InputBar } from './InputBar';
 import { SuggestionCard } from './SuggestionCard';
@@ -65,6 +66,11 @@ export function ConversationCanvas() {
     void request({ partialText: text, intent: 'request' });
   }
 
+  // Microphone → Groq Whisper → transcript → suggestions.
+  const asr = useAsr((text) => {
+    if (text.trim()) requestFor(text);
+  });
+
   function utter(text: string) {
     speak(text);
     setSpoken((s) => [text, ...s]);
@@ -101,7 +107,13 @@ export function ConversationCanvas() {
 
       {/* Live transcript (SPEC §13 streaming-transcript live region). */}
       <section aria-label="Transcript" aria-live="polite" className="min-h-8 text-lg">
-        {transcript && <span className="text-muted-foreground">You: {transcript}</span>}
+        {asr.listening && <span className="text-muted-foreground">Listening…</span>}
+        {!asr.listening && asr.transcribing && (
+          <span className="text-muted-foreground">Transcribing…</span>
+        )}
+        {!asr.listening && !asr.transcribing && transcript && (
+          <span className="text-muted-foreground">You: {transcript}</span>
+        )}
       </section>
 
       {/* Screen-reader status; visually hidden. */}
@@ -114,6 +126,11 @@ export function ConversationCanvas() {
         {error && (
           <p role="alert" className="text-sm text-destructive">
             Something went wrong: {error}
+          </p>
+        )}
+        {asr.asrError && (
+          <p role="alert" className="text-sm text-destructive">
+            {asr.asrError}
           </p>
         )}
 
@@ -200,8 +217,10 @@ export function ConversationCanvas() {
 
       <InputBar
         onSubmitText={requestFor}
+        onMic={asr.toggle}
+        listening={asr.listening}
         onEmergency={() => setShowEmergency((s) => !s)}
-        busy={loading}
+        busy={loading || asr.transcribing}
         inputRef={inputRef}
       />
     </div>
