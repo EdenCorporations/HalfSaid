@@ -2,46 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * HalfSaid design system — dark, calm, premium companion aesthetic.
+ * Tokens are exposed as the HSL triples shadcn/ui expects (so Button/Card keep
+ * working) plus a few raw values for glass + glow. Accessibility is a gate:
+ * every colour pairing here is chosen for WCAG 2.2 AA (AAA on the acceptance
+ * path) and all motion is disabled under prefers-reduced-motion.
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 36%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 72% 42%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
-  }
+    /* Core surfaces (dark-only). */
+    --background: 240 6% 4%; /* #09090B */
+    --foreground: 0 0% 100%; /* #FFFFFF */
+    --card: 222 33% 11%; /* #121826 */
+    --card-foreground: 0 0% 100%;
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 70%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 45%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* Purple accent system. */
+    --primary: 262 83% 58%; /* #7C3AED */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 33% 14%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 222 20% 16%;
+    --muted-foreground: 249 10% 75%; /* #B8B8C5 */
+    --accent: 262 40% 22%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%; /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%; /* #22C55E */
+
+    --border: 240 10% 18%;
+    --input: 240 10% 20%;
+    --ring: 271 91% 65%; /* #A855F7 glow */
+
+    /* Large rounded corners. */
+    --radius: 1rem;
+
+    /* Raw design tokens (glass + glow). */
+    --glass-bg: 255 255 255; /* used as rgba(var(--glass-bg) / a) */
+    --glow: 168 85 247; /* #A855F7 */
+    --accent-rgb: 124 58 237; /* #7C3AED */
+
+    /* Typography (bound in layout via next/font). */
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+    color-scheme: dark;
   }
 }
 
@@ -49,7 +55,119 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    /* Subtle noise + vignette baked into the base so every page shares it. */
+    background-color: hsl(var(--background));
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-heading {
+    font-family: var(--font-heading);
+  }
+}
+
+/* ---- Glass utility ---- */
+@layer components {
+  .glass {
+    background: rgba(var(--glass-bg) / 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(var(--glass-bg) / 0.08);
+  }
+  .glass-strong {
+    background: rgba(var(--glass-bg) / 0.07);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(var(--glass-bg) / 0.1);
+  }
+  /* Soft vignette + noise overlay, applied once on the app shell. */
+  .app-noise::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .app-vignette::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(120% 120% at 50% 0%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  }
+}
+
+/* ---- Keyframes (all gated behind reduced-motion below) ---- */
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.045);
+  }
+}
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+@keyframes orb-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  33% {
+    transform: translate3d(30px, -40px, 0);
+  }
+  66% {
+    transform: translate3d(-20px, 20px, 0);
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Accessibility gate: honour reduced-motion everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
