@@ -147,6 +147,52 @@ export function buildCandidate(params: BuildCandidateParams): SuggestionCandidat
   });
 }
 
+export interface GeneratedParams {
+  /** The LLM-composed sentence. */
+  readonly text: string;
+  /**
+   * PCG node ids used as grounding context (RAG). MAY be empty — on a cold start
+   * there is little PCG to draw on, and the LLM still generates (SPEC D20). When
+   * present, they're recorded as provenance so the grounding stays inspectable.
+   */
+  readonly groundingNodeIds: readonly string[];
+  readonly sourceTag: SourceTag;
+  readonly confidence: number;
+  readonly mode: SuggestionMode;
+  readonly edgeIds?: readonly string[];
+}
+
+/**
+ * Build a candidate whose text was composed by the LLM (SPEC deviation D20). The
+ * PCG is used as *information/context*, not a word-whitelist: the text need not be
+ * verbatim from the PCG and grounding is optional (cold-start safe). Any grounding
+ * used is recorded in `provenance`; the `generated` flag marks the candidate.
+ */
+export function composeGenerated(params: GeneratedParams): SuggestionCandidate | null {
+  const text = params.text.trim();
+  if (text.length === 0) {
+    throw new HardRuleViolation('a generated suggestion cannot be empty');
+  }
+  if (params.confidence < CONFIDENCE.SANDBOX_FLOOR) return null;
+
+  const grounded = params.groundingNodeIds.length > 0;
+  return Object.freeze({
+    text,
+    mode: params.mode,
+    sourceTag: params.sourceTag,
+    confidence: params.confidence,
+    gate: params.confidence >= CONFIDENCE.SHIP ? 'ship' : 'sandbox',
+    provenance: {
+      nodeIds: [...params.groundingNodeIds],
+      edgeIds: [...(params.edgeIds ?? [])],
+    },
+    explanation: grounded
+      ? explanationForSourceTag(params.sourceTag)
+      : 'A suggestion for what you might mean.',
+    generated: true,
+  });
+}
+
 /**
  * Final automated hallucination check (SPEC §8, §22.8): every emitted suggestion
  * must carry ≥1 PCG source item. Call before a candidate leaves the server. Throws

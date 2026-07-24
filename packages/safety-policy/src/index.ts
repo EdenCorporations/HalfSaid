@@ -12,9 +12,10 @@ export {
   gateFor,
   explanationForSourceTag,
   buildCandidate,
+  composeGenerated,
   assertGrounded,
 } from './candidate';
-export type { PcgSourceItem, BuildCandidateParams } from './candidate';
+export type { PcgSourceItem, BuildCandidateParams, GeneratedParams } from './candidate';
 
 export { isHighStakes, applyHighStakesFilter } from './high-stakes';
 export type { HighStakesContext } from './high-stakes';

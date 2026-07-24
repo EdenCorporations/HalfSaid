@@ -46,6 +46,34 @@ describe('suggest() end-to-end', () => {
     }
   });
 
+  it('uses LLM generation when a Groq key is provided (D20)', async () => {
+    const fetchImpl = (async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                suggestions: ['I want to visit the garden', 'I need to rest'],
+              }),
+            },
+          },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+
+    const res = await suggest(
+      exec,
+      { userId: MAYA, partialText: 'I want to', intent: 'request' },
+      { ...opts, groqApiKey: 'k', fetchImpl },
+    );
+    expect(res.kind).toBe('candidates');
+    if (res.kind !== 'candidates') return;
+    expect(res.candidates.every((c) => c.generated)).toBe(true);
+    expect(res.candidates.map((c) => c.text)).toContain('I want to visit the garden');
+  });
+
   it('respects the max-cards cognitive-load budget', async () => {
     const res = await suggest(
       exec,

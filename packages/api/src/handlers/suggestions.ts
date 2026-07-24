@@ -37,6 +37,7 @@ export async function handleSuggestions(req: Request, deps: ApiDeps): Promise<Re
       embedder: deps.embedder,
       nowEpoch: deps.now?.(),
       maxCards: body.maxCards,
+      groqApiKey: deps.llmApiKey,
     },
   );
 

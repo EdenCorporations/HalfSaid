@@ -16,6 +16,8 @@ export interface ApiDeps {
   executorFor(userId: string): SqlExecutor;
   /** Embedder for the suggestion path (defaults to the env-selected one). */
   embedder?: Embedder;
+  /** Groq key — when set, the LLM writes the suggestions (D20); else constrained. */
+  llmApiKey?: string;
   /** Clock for recency (epoch seconds); defaults to real time. */
   now?: () => number;
 }

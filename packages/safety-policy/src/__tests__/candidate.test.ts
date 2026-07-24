@@ -6,6 +6,7 @@
 
 import {
   buildCandidate,
+  composeGenerated,
   assertGrounded,
   gateFor,
   applyHighStakesFilter,
@@ -66,6 +67,58 @@ describe('the Hard Rule: candidates come only from PCG items', () => {
       confidence: 0.85,
     });
     expect(() => assertGrounded(candidate!)).not.toThrow();
+  });
+});
+
+describe('composeGenerated: LLM text grounded in PCG context (D20)', () => {
+  it('builds a generated candidate and records grounding as provenance', () => {
+    const c = composeGenerated({
+      text: 'I want to call Sarah',
+      groundingNodeIds: ['node-1', 'node-2'],
+      sourceTag: 'yours',
+      confidence: 0.85,
+      mode: 'full_utterance',
+    });
+    expect(c).not.toBeNull();
+    expect(c!.text).toBe('I want to call Sarah');
+    expect(c!.generated).toBe(true);
+    expect(c!.provenance.nodeIds).toEqual(['node-1', 'node-2']);
+    expect(c!.gate).toBe('ship');
+  });
+
+  it('allows a cold start — no grounding required', () => {
+    const c = composeGenerated({
+      text: 'I need help',
+      groundingNodeIds: [],
+      sourceTag: 'yours',
+      confidence: 0.7,
+      mode: 'full_utterance',
+    });
+    expect(c).not.toBeNull();
+    expect(c!.generated).toBe(true);
+    expect(c!.provenance.nodeIds).toEqual([]);
+    expect(c!.explanation).toMatch(/might mean/i);
+  });
+
+  it('still rejects empty text and refuses below the sandbox floor', () => {
+    expect(() =>
+      composeGenerated({
+        text: '   ',
+        groundingNodeIds: [],
+        sourceTag: 'yours',
+        confidence: 0.9,
+        mode: 'full_utterance',
+      }),
+    ).toThrow(HardRuleViolation);
+    expect(
+      composeGenerated({
+        text: 'hi',
+        groundingNodeIds: [],
+        sourceTag: 'yours',
+        confidence: 0.3,
+        mode: 'full_utterance',
+      }),
+    ).toBeNull();
   });
 });
 
