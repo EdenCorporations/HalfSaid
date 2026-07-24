@@ -43,6 +43,13 @@ const config: Config = {
           foreground: 'hsl(var(--card-foreground))',
         },
         success: 'hsl(var(--success))',
+        pink: {
+          DEFAULT: '#FF3EA5',
+          bright: '#FF4DA0',
+          deep: '#FF1F7A',
+        },
+        'blue-accent': '#4F7CFF',
+        glow2: '#C084FC',
       },
       fontFamily: {
         heading: ['var(--font-heading)', 'Space Grotesk', 'system-ui', 'sans-serif'],
@@ -84,11 +91,32 @@ const config: Config = {
           '70%': { transform: 'scale(1.6)', opacity: '0' },
           '100%': { opacity: '0' },
         },
+        'gradient-x': {
+          '0%,100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
+        twinkle: {
+          '0%,100%': { opacity: '0.15', transform: 'scale(0.85)' },
+          '50%': { opacity: '0.9', transform: 'scale(1.1)' },
+        },
+        'wave-x': {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        blob: {
+          '0%,100%': { transform: 'translate(0,0) scale(1)' },
+          '33%': { transform: 'translate(28px,-36px) scale(1.08)' },
+          '66%': { transform: 'translate(-22px,20px) scale(0.94)' },
+        },
       },
       animation: {
         breathe: 'breathe 5s ease-in-out infinite',
         'float-slow': 'float-slow 7s ease-in-out infinite',
         'pulse-ring': 'pulse-ring 2.4s ease-out infinite',
+        'gradient-x': 'gradient-x 6s ease infinite',
+        twinkle: 'twinkle 4s ease-in-out infinite',
+        'wave-x': 'wave-x 24s linear infinite',
+        blob: 'blob 26s ease-in-out infinite',
       },
     },
   },

@@ -12,6 +12,8 @@ export interface CompanionOrbProps {
   state?: OrbState;
   /** Diameter in px. */
   size?: number;
+  /** Render a warm smile (e.g. on hover). */
+  smiling?: boolean;
   className?: string;
 }
 
@@ -23,7 +25,12 @@ export interface CompanionOrbProps {
  * (state is announced separately via aria-live), so it is aria-hidden. All
  * motion is disabled under prefers-reduced-motion.
  */
-export function CompanionOrb({ state = 'idle', size = 460, className }: CompanionOrbProps) {
+export function CompanionOrb({
+  state = 'idle',
+  size = 460,
+  smiling = false,
+  className,
+}: CompanionOrbProps) {
   const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -126,19 +133,26 @@ export function CompanionOrb({ state = 'idle', size = 460, className }: Companio
               <Eye reduce={!!reduce} thinking={state === 'thinking'} />
             </div>
             {/* Mouth. */}
-            <div
-              className="mt-[8%] rounded-full bg-white/85"
-              style={{
-                width: state === 'speaking' ? '18%' : '22%',
-                height: state === 'speaking' ? '10%' : '4%',
-                transformOrigin: 'center',
-                animation:
-                  state === 'speaking' && !reduce
-                    ? 'mouth-talk 0.4s ease-in-out infinite'
-                    : undefined,
-                transition: 'height 300ms ease, width 300ms ease',
-              }}
-            />
+            {smiling && state !== 'speaking' ? (
+              <div
+                className="mt-[8%] rounded-b-full border-b-[3px] border-white/85"
+                style={{ width: '28%', height: '13%', transition: 'all 300ms ease' }}
+              />
+            ) : (
+              <div
+                className="mt-[8%] rounded-full bg-white/85"
+                style={{
+                  width: state === 'speaking' ? '18%' : '22%',
+                  height: state === 'speaking' ? '10%' : '4%',
+                  transformOrigin: 'center',
+                  animation:
+                    state === 'speaking' && !reduce
+                      ? 'mouth-talk 0.4s ease-in-out infinite'
+                      : undefined,
+                  transition: 'height 300ms ease, width 300ms ease',
+                }}
+              />
+            )}
           </motion.div>
         </div>
       </motion.div>

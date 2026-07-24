@@ -1,12 +1,6 @@
-import { AppShell } from '@/components/brand/AppShell';
 import { Hero } from '@/components/landing/Hero';
-import { FeatureSection } from '@/components/landing/FeatureSection';
 
+/** Landing — one fullscreen, no-scroll cinematic hero. */
 export default function HomePage() {
-  return (
-    <AppShell>
-      <Hero />
-      <FeatureSection />
-    </AppShell>
-  );
+  return <Hero />;
 }
