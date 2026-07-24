@@ -30,8 +30,9 @@ const nextConfig = {
     '@halfsaid/retrieval',
     '@halfsaid/api',
   ],
-  // PGlite ships a WASM bundle; keep it external to the server build (mock-mode DB).
-  serverExternalPackages: ['@electric-sql/pglite'],
+  // PGlite (WASM, mock DB) and pg (native-ish, real DB) stay external to the server
+  // build.
+  serverExternalPackages: ['@electric-sql/pglite', 'pg'],
 };
 
 export default nextConfig;

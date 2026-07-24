@@ -468,6 +468,7 @@ reason. Add to this list as deviations are made.
 | D15 | A **4th retrieval source — a predictive salience/recency prior** (PRD §13.6) — is added alongside semantic/subgraph/keyword so a generic opener ("I want to…") surfaces habitual phrases; near-variants are de-duplicated | §17.1 | Pure semantic/keyword can't connect a bare opener to "call Sarah"; the prior is how the demo three emerge without hardcoding |
 | D16 | `/v1/*` handlers are framework-agnostic (`Request`→`Response`) with **auth + DB executor injected**; the Next.js routes wire them. In **mock mode** the DB is a single in-memory **PGlite** (migrations+seed+embeddings) and auth is a header/demo-user; the **real per-request Postgres executor is stubbed** (throws unless mock mode) | §12, §24.1 | Whole API runs offline without Supabase for the demo/CI; real Postgres + JWT wiring is a deploy concern (Phase 7). Mock DB shares one session, so it is single-user only |
 | D17 | ASR is **record-then-transcribe** (near-real-time) via a `/api/v1/asr` proxy to Groq Whisper large-v3, not token-by-token streaming | §16 | MediaRecorder + a single Groq transcription call is enough for the demo; the streaming/chunked pipeline is post-MVP. Verified round-trip: speech → route → correct transcript |
+| D18 | **Real Supabase** is now wired: schema + seed applied via `scripts/apply-supabase.mjs` over the **IPv4 session pooler** (direct `db.<ref>` host is IPv6-only); the real per-request RLS-scoped `pg` executor replaces the D16 stub. The demo still authenticates as Maya (mock auth) over the real DB; full JWT sign-in is post-MVP | §12, §24.1 | Real persistent Postgres for the demo; the mock PGlite DB remains the secret-free fallback for dev/CI |
 
 **Phase-2 enhancement beyond the PRD (not a deviation):** an **append-only trigger**
 on `pcg_nodes`/`pcg_edges` makes the bi-temporal "corrections supersede, never
@@ -543,6 +544,14 @@ card. Tested with **jest-axe (zero violations)**, wired into CI as `test:a11y`.
   clinical scores in a way that could be mistaken for real measurement.
 - **Conversation log** — the log entries produced by demo exchanges (each accept
   writes one).
+
+**Implemented** (`apps/web/components/clinician`, `app/clinician`): `FcmTrendChart`
+(inline-SVG FCM trend, visibly **MOCK DATA**, `role=img` summary + hidden data table)
+and `ConversationLog` (recent utterances from `/v1/pcg/timeline`, tagged by source
+tier). Each accepted phrase spoken on the Canvas is persisted as an Utterance
+(`/v1/pcg/nodes`) and appears here. Verified end-to-end in a browser against **real
+Supabase**: accepting "call Sarah" on the Canvas surfaced it in the log. Tested with
+jest-axe (zero violations).
 
 ---
 

@@ -15,6 +15,7 @@ import { join, resolve } from 'node:path';
 import { createTestDb, type TestDb } from '@halfsaid/pcg/testing';
 import { backfillEmbeddings, getEmbedder, type SqlExecutor } from '@halfsaid/retrieval';
 import type { ApiDeps } from '@halfsaid/api';
+import { hasRealDb, pgExecutorFor } from './db-pg';
 
 /** The seeded demo user (Maya). */
 const DEMO_USER = '00000000-0000-4000-8000-000000000001';
@@ -85,10 +86,9 @@ async function resolveUserId(req: Request): Promise<string | null> {
 }
 
 function executorFor(userId: string): SqlExecutor {
-  if (mockMode) return mockExecutorFor(userId);
-  throw new Error(
-    'Real Postgres executor is not wired in the MVP build; set HALFSAID_MOCK_MODE=true.',
-  );
+  // Prefer real Supabase when configured; otherwise the in-memory mock DB.
+  if (hasRealDb()) return pgExecutorFor(userId);
+  return mockExecutorFor(userId);
 }
 
 export function getApiDeps(): ApiDeps {
