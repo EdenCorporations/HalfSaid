@@ -17,5 +17,5 @@ export {
 } from './candidate';
 export type { PcgSourceItem, BuildCandidateParams, GeneratedParams } from './candidate';
 
-export { isHighStakes, applyHighStakesFilter } from './high-stakes';
-export type { HighStakesContext } from './high-stakes';
+export { isHighStakes, detectHighStakes, applyHighStakesFilter } from './high-stakes';
+export type { HighStakesContext, HighStakesDetection } from './high-stakes';

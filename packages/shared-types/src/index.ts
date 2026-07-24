@@ -153,12 +153,20 @@ export interface RefusalResponse {
   reason: string;
   /** Offered alternatives, e.g. "type", "switch mode", "ask SLP". */
   alternatives: string[];
+  /** Set when the high-stakes block was active for this request (SPEC §7.3). */
+  highStakes?: boolean;
+  /** The detected high-stakes category (medical/legal/financial/consent). */
+  highStakesCategory?: string;
 }
 
 export interface CandidatesResponse {
   kind: 'candidates';
   /** Up to 5 cards (SPEC §13). */
   candidates: SuggestionCandidate[];
+  /** Set when the high-stakes block was active for this request (SPEC §7.3). */
+  highStakes?: boolean;
+  /** The detected high-stakes category (medical/legal/financial/consent). */
+  highStakesCategory?: string;
 }
 
 /** Response of POST /v1/suggestions (SPEC §12). */
@@ -182,5 +190,9 @@ export type {
   TimelineQuery,
   TimelineItem,
   TimelineResponse,
+  GraphNode,
+  GraphEdge,
+  GraphTotals,
+  GraphResponse,
 } from './api';
 export { toNodeDTO } from './api';

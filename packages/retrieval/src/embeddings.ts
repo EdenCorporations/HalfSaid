@@ -60,26 +60,76 @@ export class MockEmbedder implements Embedder {
   }
 }
 
+const GEMINI_MODEL = 'gemini-embedding-001';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:embedContent`;
+
+interface GeminiEmbedResponse {
+  embedding?: { values?: number[] };
+}
+
 /**
- * Placeholder for the hosted embedder (O2/D10). Not exercised in CI (no key); wiring
- * a real HTTP call is left for when a key is provisioned.
+ * Real hosted embedder (O2/D10 — resolved): Google `gemini-embedding-001` truncated
+ * to 1024-d via `outputDimensionality` (free tier). Truncated vectors are NOT unit
+ * length, so we L2-normalize before storing/querying — cosine distance then behaves
+ * identically to the mock path. A small in-memory cache absorbs repeated queries
+ * (the same partial text is often re-requested within a session).
  */
-export class HostedEmbedder implements Embedder {
+export class GeminiEmbedder implements Embedder {
   readonly dim = EMBEDDING_DIM;
-  readonly id = 'hosted';
-  constructor(private readonly apiKey: string) {}
-  async embed(_text: string): Promise<number[]> {
-    throw new Error(
-      'HostedEmbedder is not wired in the MVP build; set HALFSAID_MOCK_MODE=true to use MockEmbedder.',
-    );
+  readonly id = `${GEMINI_MODEL}@${EMBEDDING_DIM}`;
+  private readonly cache = new Map<string, number[]>();
+
+  constructor(
+    private readonly apiKey: string,
+    private readonly fetchImpl: typeof fetch = fetch,
+  ) {}
+
+  async embed(text: string): Promise<number[]> {
+    const key = text.trim().toLowerCase();
+    const hit = this.cache.get(key);
+    if (hit) return hit;
+
+    const res = await this.fetchImpl(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'x-goog-api-key': this.apiKey, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: `models/${GEMINI_MODEL}`,
+        content: { parts: [{ text }] },
+        taskType: 'SEMANTIC_SIMILARITY',
+        outputDimensionality: EMBEDDING_DIM,
+      }),
+    });
+    if (!res.ok) throw new Error(`gemini embed failed (${res.status})`);
+    const data = (await res.json()) as GeminiEmbedResponse;
+    const values = data.embedding?.values;
+    if (!Array.isArray(values) || values.length !== EMBEDDING_DIM) {
+      throw new Error('gemini embed returned an unexpected shape');
+    }
+
+    // L2-normalize (truncated Gemini vectors are not unit length).
+    let norm = 0;
+    for (const x of values) norm += x * x;
+    norm = Math.sqrt(norm);
+    const vec = norm === 0 ? values : values.map((x) => x / norm);
+
+    // Bounded cache: evict the oldest entry once full.
+    if (this.cache.size >= 500) {
+      const oldest = this.cache.keys().next().value;
+      if (oldest !== undefined) this.cache.delete(oldest);
+    }
+    this.cache.set(key, vec);
+    return vec;
   }
 }
 
-/** Pick the embedder from the environment: mock unless a key is present and mock off. */
+/**
+ * Pick the embedder from the environment. A Gemini key means REAL embeddings —
+ * regardless of mock mode, because the demo runs mock auth against real Supabase
+ * and the seed/query embedders must match. No key (CI, offline) → deterministic mock.
+ */
 export function getEmbedder(env: NodeJS.ProcessEnv = process.env): Embedder {
-  const mock = env.HALFSAID_MOCK_MODE !== 'false';
-  const key = env.EMBEDDINGS_API_KEY;
-  if (!mock && key) return new HostedEmbedder(key);
+  const key = env.GEMINI_API_KEY || env.EMBEDDINGS_API_KEY;
+  if (key) return new GeminiEmbedder(key);
   return new MockEmbedder();
 }
 

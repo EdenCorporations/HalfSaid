@@ -187,6 +187,35 @@ curl -X POST localhost:3000/api/v1/federated/aggregate -H 'content-type: applica
        "dp":{"epsilon":1.0,"delta":1e-5}}'
 ```
 
+### 4.4 Demo experience — the gap-closure pass ✅ *(implemented)*
+
+All 15 enhancements from the external gap analysis, closed
+(full status table in [SPEC §19](docs/SPEC.md#19-gap-closure-pass-2026-07-25-gap-analysis--improvement-review)):
+
+- **Real semantic retrieval** — `gemini-embedding-001` (1024-d) embeds the seed, every
+  query, and every new utterance at ingest. Verified live: *"phone my daughter"* →
+  *"Call my daughter."* at **0.983 cosine** with zero shared words. The PCG moat is
+  measurable, not a slide.
+- **The graph made visible** — a zero-dependency force-directed **PCG mini-map**
+  (canvas, hub-ranked, typed colors, hover, screen-reader summary) on the Canvas and
+  the clinician dashboard, plus a **live node/edge counter** that pulses as the graph
+  learns from each utterance.
+- **Dignity First, operationalized** — accepting a suggestion speaks immediately but
+  persists only after a **5-second undo window**; undo cancels speech and saves
+  nothing.
+- **High-stakes detection** — medication / legal / financial / consent topics are
+  detected from the text itself: free generation is blocked, only clinician-approved
+  (Tier 3) phrases surface, and the UI shows a shield explaining why.
+- **Natural voice input** — live interim transcript while speaking + silence-based
+  auto-stop (VAD), so the mic needs one tap, not two.
+- **Two personas** — Maya (Broca's aphasia) and David (ALS) are separate RLS-scoped
+  graphs; switching visibly changes every suggestion, log, and map.
+- **Clinic-native proof** — LIVE session stats beside the clearly-MOCK FCM chart,
+  searchable/paginated conversation log, and a print-optimized **PDF session report**.
+- **Demo-day polish** — 4-step guided tour, teach-a-new-phrase refusal exit,
+  keyboard shortcuts (1–5 / M / Esc), long-press-to-edit, staggered card animations,
+  landing stat strip, and global error boundaries.
+
 ## 5. Tech Stack
 
 ### 5.1 Infrastructure
@@ -577,13 +606,14 @@ python -m services.worker.reflection --once   # trigger reflection manually
 
 ### 9.4 Usage - the 3-minute demo path
 
-1. Sign in with GitHub OAuth. The demo account loads the **Maya** persona - post-stroke Broca's aphasia, PCG pre-populated with family, routines, and 200 vocabulary items.
-2. Open the **Conversation Canvas** and grant microphone permission.
-3. Say *"I want to…"*. VAD fires, streaming ASR transcribes live.
-4. Three PCG-grounded candidates appear - e.g. *"call Sarah"*, *"go to the garden"*, *"read my book"* - each with a confidence bar and a source tag (`yours` / `family-validated` / `therapist-approved`).
-5. Tap a candidate. HalfSaid speaks it in Maya's cloned voice. Long-press to edit before speaking.
-6. Tap the explanation chip to see the PCG provenance: *"I suggested this because you said X to Y on date Z."*
-7. Open the **Clinician Dashboard** to see the FCM trend and the conversation log written by that exchange.
+1. Open the app. A **4-step guided tour** frames the Personal Communication Graph story on first visit (replayable via the **?** button).
+2. On the **Conversation Canvas**, pick a persona — **Maya** (post-stroke Broca's aphasia, 200-node PCG: family, garden, tea) or **David** (ALS, his own graph: chess, fishing, Anna). Each is a separate RLS-scoped PCG owner.
+3. Tap the mic and say *"I want to…"* — a **live interim transcript** streams while you speak, and recording **stops itself** after a pause (VAD). Groq Whisper produces the final text.
+4. PCG-grounded candidates appear — e.g. *"call Sarah"* — each with a confidence bar and a source tag (`yours` / `family-validated` / `therapist-approved`). Keys **1–5** accept a card.
+5. Tap a candidate. It's spoken aloud with a **5-second undo** window; only when the window closes does it persist into the PCG. Long-press a card to edit first.
+6. Say something important — *"I need my medication"* — and watch the **high-stakes shield**: free generation is blocked and only clinician-approved phrases are offered.
+7. Tap **"See my graph"** — the PCG mini-map renders the living graph, and the **node/edge counter pulses** as it grows with every utterance. If nothing matches, **teach a new phrase** right from the refusal card.
+8. Open the **Clinician Dashboard**: LIVE activity stats (beside the clearly-MOCK FCM trend), the searchable conversation log with the new entry, the graph card, and **Export report (PDF)**.
 
 ### 9.5 Common tasks
 
@@ -596,12 +626,14 @@ npm test                          # Jest (RLS/bi-temporal/seed + retrieval + API
 npm run test:a11y                 # axe-core - zero violations required
 npm run test:e2e -w apps/web      # Playwright - the 3-minute demo path (builds first)
 npm run license-audit             # fails on GPLv3 / AGPL / CPML / CC-BY-NC
-node scripts/apply-supabase.mjs   # apply migrations + Maya seed to real Supabase
+node scripts/apply-supabase.mjs   # apply migrations + both persona seeds + embeddings
+node scripts/apply-supabase.mjs --re-embed   # re-embed the whole graph (embedder upgrade)
 ```
 
 > **Run modes.** With no secrets, the app uses an in-memory mock DB (PGlite) seeded
-> with Maya — everything works offline, and CI runs this way. Fill `.env` from
-> `.env.example` (Supabase pooler + `GROQ_API_KEY`) to use real Supabase + Groq ASR.
+> with Maya + David — everything works offline, and CI runs this way. Fill `.env`
+> from `.env.example` (Supabase pooler + `GROQ_API_KEY` + `GEMINI_API_KEY`) to get
+> real Supabase, Groq ASR/LLM, and **real 1024-d Gemini semantic embeddings**.
 > Hosting notes are in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ---

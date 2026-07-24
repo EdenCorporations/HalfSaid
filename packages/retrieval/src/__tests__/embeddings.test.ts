@@ -4,7 +4,14 @@
  */
 
 import { createTestDb, type TestDb } from '@halfsaid/pcg/testing';
-import { MockEmbedder, cosine, backfillEmbeddings, EMBEDDING_DIM } from '../index';
+import {
+  MockEmbedder,
+  GeminiEmbedder,
+  getEmbedder,
+  cosine,
+  backfillEmbeddings,
+  EMBEDDING_DIM,
+} from '../index';
 
 describe('MockEmbedder', () => {
   const e = new MockEmbedder();
@@ -28,6 +35,45 @@ describe('MockEmbedder', () => {
   it('returns a zero vector for empty text', async () => {
     const z = await e.embed('   ');
     expect(z.every((x) => x === 0)).toBe(true);
+  });
+});
+
+describe('GeminiEmbedder', () => {
+  function fakeFetch(values: number[]): typeof fetch {
+    return jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ embedding: { values } }),
+    }) as unknown as typeof fetch;
+  }
+
+  it('L2-normalizes the truncated 1024-d vector', async () => {
+    // Raw (un-normalized) values, as Gemini returns for truncated dims.
+    const raw = Array.from({ length: EMBEDDING_DIM }, (_, i) => (i % 7) - 3);
+    const e = new GeminiEmbedder('test-key', fakeFetch(raw));
+    const v = await e.embed('call Sarah');
+    expect(v).toHaveLength(EMBEDDING_DIM);
+    const norm = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+    expect(norm).toBeCloseTo(1, 5);
+  });
+
+  it('caches repeated queries (one HTTP call for the same text)', async () => {
+    const raw = Array.from({ length: EMBEDDING_DIM }, () => 1);
+    const f = fakeFetch(raw);
+    const e = new GeminiEmbedder('test-key', f);
+    await e.embed('I want tea');
+    await e.embed('I want tea');
+    expect((f as jest.Mock).mock.calls).toHaveLength(1);
+  });
+
+  it('throws on a non-1024-d response', async () => {
+    const e = new GeminiEmbedder('test-key', fakeFetch([1, 2, 3]));
+    await expect(e.embed('x')).rejects.toThrow(/unexpected shape/);
+  });
+
+  it('is selected by getEmbedder when a Gemini key is present', () => {
+    expect(getEmbedder({ GEMINI_API_KEY: 'k' } as NodeJS.ProcessEnv).id).toMatch(/^gemini/);
+    expect(getEmbedder({} as NodeJS.ProcessEnv).id).toBe('mock-bow-1024');
   });
 });
 

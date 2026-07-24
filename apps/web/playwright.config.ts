@@ -31,7 +31,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     // GROQ_API_KEY='' forces the deterministic constrained path (the LLM path
-    // generates non-deterministic sentences, which can't be asserted).
-    env: { HALFSAID_MOCK_MODE: 'true', SUPABASE_DB_HOST: '', GROQ_API_KEY: '' },
+    // generates non-deterministic sentences, which can't be asserted); likewise
+    // GEMINI_API_KEY='' keeps the deterministic mock embedder.
+    env: { HALFSAID_MOCK_MODE: 'true', SUPABASE_DB_HOST: '', GROQ_API_KEY: '', GEMINI_API_KEY: '' },
   },
 });

@@ -7,11 +7,13 @@
  * graph grows from use and appears in the clinician's conversation log. Best-effort:
  * a failure never blocks speech.
  */
+import { personaHeaders } from './persona';
+
 export async function logSpokenUtterance(text: string): Promise<void> {
   try {
     await fetch('/api/v1/pcg/ingest', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...personaHeaders() },
       body: JSON.stringify({ content: text, mode: 'full_utterance' }),
     });
   } catch {

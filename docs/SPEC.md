@@ -462,10 +462,10 @@ reason. Add to this list as deviations are made.
 | D1 | Cross-encoder re-rank (step 3) replaced with a cheaper scorer (e.g. cosine + BM25 blend) for MVP | §17.1 | No fine-tuned cross-encoder in 48h; the seam stays so it can be swapped in |
 | D2 | Confidence calibration (Platt/isotonic, weekly ECE recalibration) approximated with a fixed weighted geometric mean; each input is floored (0.4) so one weak signal can't zero the score; generation log-prob is a fixed proxy (constrained items are high) | §22.2 | No accept/reject history and no LLM decoder at demo time |
 | D3 | Privacy-tier enforcement via RLS only; per-row encryption-key derivation not implemented | §13.4 | RLS proves the visibility guarantee (incl. "no admin reads Tier 1") without the key-management build-out |
-| D4 | High-stakes context **detection** not implemented; interception seam + forced-flag test only | §22.4 | MVP scope explicitly stubs detection; seam is what must exist |
+| D4 | ~~High-stakes context **detection** not implemented; interception seam + forced-flag test only~~ **Resolved (gap-closure pass, 2026-07-25):** `detectHighStakes()` scans the utterance text for medical/legal/financial/consent topics; a hit forces the constrained path (no free generation), restricts to Tier 3, and the response carries `highStakes` + category for the UI shield. Forced flag retained | §22.4 | A wrong word about medication or a signature is exactly the hallucination class the Hard Rule targets; text-based detection was cheap and testable. Location/partner detection still post-MVP |
 | D5 | `supersedes` / `known_at` modeled via `superseded_by` / `ingestion_time` columns rather than materialized edges | §13.2–13.3 | Column form is sufficient for MVP correction/audit; edge enum retained for full model |
 | D6 | TTS is browser `SpeechSynthesis`; no OpenVoice / voice cloning / watermark | §31.1 | Explicit MVP decision; clean seam left |
-| D7 | Embeddings: source/model for the 1024-d vectors is TBD (see open question O2) | §14 | Must confirm a free 1024-d embedder before Phase 2 |
+| D7 | ~~Embeddings: source/model for the 1024-d vectors is TBD (see open question O2)~~ **Resolved (gap-closure pass):** Google **`gemini-embedding-001`** truncated to 1024-d via `outputDimensionality` and L2-renormalized (`GeminiEmbedder`); selected whenever `GEMINI_API_KEY` is set. Seed backfill + query-time + **ingest-time** embedding all use it; the live Supabase graph is fully re-embedded (`apply-supabase.mjs --re-embed`) | §14 | Free tier, 1024-d capable, verified live: "phone my daughter" → "Call my daughter." at 0.983 cosine with zero token overlap |
 | D8 | ASR/LLM available in **fixture/mock mode**; no live keys required for dev/CI | working agreements | CI must run green without secrets |
 | D9 | Auth via Supabase **email magic-link**, not GitHub OAuth | §31.1 | Avoids external OAuth app config for the demo (O1) |
 | D10 | Embeddings from a **hosted free embedder**; seed vectors **committed as fixtures**, query tests use cached/mocked embeddings | §14 | Keeps CI green without secrets while getting real semantic quality for the curated seed (O2) |
@@ -475,7 +475,7 @@ reason. Add to this list as deviations are made.
 | D14 | Dev/CI embeddings use a **deterministic bag-of-words `MockEmbedder`** (1024-d); the hosted embedder (D10) is a placeholder not exercised without a key | §14 | No embedding key in CI; BoW gives enough token-overlap signal over the curated seed |
 | D15 | A **4th retrieval source — a predictive salience/recency prior** (PRD §13.6) — is added alongside semantic/subgraph/keyword so a generic opener ("I want to…") surfaces habitual phrases; near-variants are de-duplicated | §17.1 | Pure semantic/keyword can't connect a bare opener to "call Sarah"; the prior is how the demo three emerge without hardcoding |
 | D16 | `/v1/*` handlers are framework-agnostic (`Request`→`Response`) with **auth + DB executor injected**; the Next.js routes wire them. In **mock mode** the DB is a single in-memory **PGlite** (migrations+seed+embeddings) and auth is a header/demo-user; the **real per-request Postgres executor is stubbed** (throws unless mock mode) | §12, §24.1 | Whole API runs offline without Supabase for the demo/CI; real Postgres + JWT wiring is a deploy concern (Phase 7). Mock DB shares one session, so it is single-user only |
-| D17 | ASR is **record-then-transcribe** (near-real-time) via a `/api/v1/asr` proxy to Groq Whisper large-v3, not token-by-token streaming | §16 | MediaRecorder + a single Groq transcription call is enough for the demo; the streaming/chunked pipeline is post-MVP. Verified round-trip: speech → route → correct transcript |
+| D17 | ASR is **record-then-transcribe** (near-real-time) via a `/api/v1/asr` proxy to Groq Whisper large-v3, not token-by-token streaming. **Softened (gap-closure pass):** while recording, the browser Web Speech API streams a **live interim transcript** (display only; Whisper stays the final text), and an AnalyserNode **VAD auto-stops** after ~1.8s of post-speech silence (20s hard cap) — no second tap needed | §16 | MediaRecorder + a single Groq transcription call is enough for the demo; the streaming/chunked pipeline is post-MVP. The interim display removes the 2–4s dead zone; auto-stop removes a motor-control barrier |
 | D18 | **Real Supabase** is now wired: schema + seed applied via `scripts/apply-supabase.mjs` over the **IPv4 session pooler** (direct `db.<ref>` host is IPv6-only); the real per-request RLS-scoped `pg` executor replaces the D16 stub. The demo still authenticates as Maya (mock auth) over the real DB; full JWT sign-in is post-MVP | §12, §24.1 | Real persistent Postgres for the demo; the mock PGlite DB remains the secret-free fallback for dev/CI |
 | D19 | **Deploy target is a Node host, not Cloudflare Pages/Workers** for now. The API is Node-runtime (`pg` over TCP, `node:fs`, PGlite/WASM), which `@cloudflare/next-on-pages` (Edge-only) can't build. A real Cloudflare port needs `@opennextjs/cloudflare` + a Workers-safe Postgres path — tracked in [docs/DEPLOY.md](DEPLOY.md) | §11.1, §24.1 | The MVP is verified end-to-end locally + in Playwright; the Cloudflare adaptation is post-MVP work, not a blocker for the demo |
 | **D20** | **The Hard Rule is relaxed to RAG-grounded generation (owner decision).** User-facing suggestions are now **written by the LLM** (Groq Llama 3.3 70B) using retrieved PCG items as *context/information*, not constrained-decoded verbatim from PCG items. Grounding is **optional** (cold-start safe); the PCG grows via ingestion (`/v1/pcg/ingest` LLM-extracts entities into new nodes+edges). The constrained-decoding path (`buildCandidate`) remains as the **no-key and high-stakes fallback**, and its tests still pass. | §0 Rule 1, §22.1, §12.3 #4 | The constrained-only path returned the same salient items for every input (unusable) and crumbled on a cold/sparse PCG. **⚠️ Safety:** this reintroduces exactly the free-form hallucination risk the PRD's Hard Rule exists to prevent — words the aphasia user can't verify, in their voice. Accepted for the synthetic-persona demo; **a real clinical deployment must restore constrained decoding + clinical review** (see §0). |
@@ -496,7 +496,10 @@ MVP implements the first three; the rest are post-MVP and listed for context.
 |---|---|---|---|---|
 | `/v1/suggestions` | POST | Supabase JWT | Context in → ranked candidates + confidence + provenance out | ✅ done |
 | `/v1/pcg/nodes` | GET/POST/PATCH/DELETE | Supabase JWT + RLS | CRUD; PATCH = append-only correction (supersede); DELETE revokes | ✅ done |
-| `/v1/pcg/timeline` | GET | Supabase JWT | Memory Timeline, filterable (person/topic/emotion/language) | ✅ done |
+| `/v1/pcg/timeline` | GET | Supabase JWT | Memory Timeline, filterable (person/topic/emotion/language) + free-text `q` search + `limit`/`offset` paging with `total` | ✅ done |
+| `/v1/pcg/ingest` | POST | Supabase JWT | Persist a spoken/typed utterance (embedded at insert) + LLM entity extraction into new nodes/edges (D20) | ✅ done |
+| `/v1/pcg/graph` | GET | Supabase JWT | Mini-map slice: hub-ranked nodes + closed edge set + whole-graph totals (growth counter) | ✅ done |
+| `/v1/federated/model`, `/v1/federated/aggregate` | GET/POST | Supabase JWT | Federated learning global model + masked-delta aggregation (see §18) | ✅ done |
 | `/v1/episodes/{id}/replay` | GET | Clinician OAuth | Replay Studio data | ✗ post-MVP |
 | `/v1/therapy/session` | POST | Clinician OAuth | Therapy Mode session | ✗ post-MVP |
 | `/v1/voice/synthesize` | POST | JWT + consent | Cloned-voice TTS + watermark | ✗ post-MVP |
@@ -689,6 +692,37 @@ aggregator:                  mean(masked Δw)  ==  mean(true Δw)   (masks cance
 
 Verified end-to-end against real Supabase: three clinics' masked deltas advanced the
 global model (relevance 0.35 → 0.55) with Safety pinned at 0.15 and the round logged.
+
+---
+
+## 19. Gap-closure pass (2026-07-25) `[Gap Analysis & Improvement Review]`
+
+An external gap analysis compared the codebase against PRD v1.0 and proposed 15
+demo-impact enhancements across three tiers. All were implemented (or deliberately
+resolved) in this pass:
+
+| # | Enhancement | Status | Where |
+|---|---|---|---|
+| 1 | Real embeddings | ✅ `gemini-embedding-001` @1024-d, seed backfill + query + ingest-time; live graph re-embedded (D7) | `packages/retrieval/embeddings.ts`, `scripts/apply-supabase.mjs --re-embed` |
+| 2 | Live streaming transcript | ✅ Web Speech interim display while recording (Whisper stays the final text) (D17) | `lib/client/useAsr.ts` |
+| 3 | Undo on accept | ✅ 5s undo toast; speech cancels; PCG persist deferred until the window closes | `components/canvas/UndoToast.tsx`, `ConversationCanvas.tsx` |
+| 4 | Guided demo walkthrough | ✅ 4-step first-visit tour (accessible dialog, localStorage, replayable via ?) | `components/canvas/DemoWalkthrough.tsx` |
+| 5 | Suggestion card animations | ✅ framer-motion spring + per-card stagger | `SuggestionCard.tsx` |
+| 6 | PCG visualization mini-map | ✅ zero-dependency force-directed canvas (hub-ranked, typed colors, hover, a11y summary) on Canvas + clinician dashboard | `components/pcg/PcgMiniMap.tsx`, `/v1/pcg/graph` |
+| 7 | Enhanced refusal UI | ✅ alternatives + **Teach a new phrase** → `/v1/pcg/ingest` → retry | `components/canvas/TeachPhrase.tsx` |
+| 8 | Session statistics | ✅ LIVE-labelled activity card (total/7-day/active days/top phrases) computed from the timeline, beside the MOCK FCM chart | `components/clinician/SessionStats.tsx` |
+| 9 | VAD auto-stop | ✅ AnalyserNode RMS silence detection (~1.8s), 20s hard cap (D17) | `lib/client/useAsr.ts` |
+| 10 | Multi-persona switch | ✅ David (ALS, 70-node seed, own RLS scope) + segmented switcher; E2E proves his suggestions differ | `supabase/seed-david.sql`, `components/brand/PersonaSwitcher.tsx` |
+| 11 | PCG growth counter | ✅ live nodes/edges chip, pulses when the graph grows after each utterance | `components/pcg/PcgGrowthChip.tsx` |
+| 12 | Landing page metrics | ✅ compact stat strip (2M+ / 180k / 1 graph per person) inside the one-viewport hero | `components/landing/StatStrip.tsx` |
+| 13 | Dark mode | ◐ **Resolved by design:** the redesign is a deliberate dark-only companion aesthetic (`color-scheme: dark`); a light theme over the glass/glow system is post-MVP. Reduced-motion is honoured globally; the print stylesheet is the light rendering | `globals.css` |
+| 14 | Export conversation PDF | ✅ print-optimized `/clinician/report` (metadata, stats, utterance table, synthetic-data watermark) via browser print-to-PDF — zero deps | `app/clinician/report/page.tsx` |
+| 15 | Keyboard shortcuts | ✅ 1–5 accept, M / Ctrl+M mic, Esc close; long-press a card to edit; never hijacks typing | `ConversationCanvas.tsx` |
+
+Also closed from the gap report's §2.2 list: high-stakes **detection** (D4 resolved),
+conversation-log **search + pagination** (`q`/`offset`/`total`), global **error
+boundaries** (`app/error.tsx`, `app/global-error.tsx`), and **ingest-time
+embeddings** so new utterances are semantically retrievable immediately.
 
 ---
 

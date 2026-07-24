@@ -78,6 +78,8 @@ export interface CreateTestDbOptions {
   migrationsDir?: string;
   /** Override the seed file path (default resolves from this file). */
   seedFile?: string;
+  /** Additional seed files applied after the main seed (e.g. the David persona). */
+  extraSeedFiles?: string[];
 }
 
 /** Spin up a fresh in-memory database with migrations (and optional seed) applied. */
@@ -106,6 +108,9 @@ export async function createTestDb(options: CreateTestDbOptions = {}): Promise<T
   if (options.withSeed) {
     const seed = readFileSync(seedFile, 'utf8');
     await db.exec(seed);
+    for (const extra of options.extraSeedFiles ?? []) {
+      await db.exec(readFileSync(extra, 'utf8'));
+    }
   }
 
   async function become(principal: Principal): Promise<void> {

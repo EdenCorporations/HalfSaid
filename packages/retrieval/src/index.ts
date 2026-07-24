@@ -8,7 +8,7 @@
 export {
   EMBEDDING_DIM,
   MockEmbedder,
-  HostedEmbedder,
+  GeminiEmbedder,
   getEmbedder,
   backfillEmbeddings,
   toVectorLiteral,
