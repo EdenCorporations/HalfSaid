@@ -9,6 +9,7 @@ import { RobotSpline } from './RobotSpline';
 import { HeroButtons } from './HeroButtons';
 import { FeatureCards } from './FeatureCards';
 import { FooterTag } from './FooterTag';
+import { StatStrip } from './StatStrip';
 
 /**
  * The HalfSaid landing hero — one fullscreen viewport, no scrolling. Navigation
@@ -47,6 +48,9 @@ export function Hero() {
               <HeroButtons />
             </div>
             <div className="mt-6 hidden md:block">
+              <StatStrip />
+            </div>
+            <div className="mt-4 hidden md:block">
               <FooterTag />
             </div>
           </div>

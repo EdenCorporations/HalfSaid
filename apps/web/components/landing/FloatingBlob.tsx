@@ -30,7 +30,10 @@ export function FloatingBlob({
     <motion.div
       aria-hidden="true"
       style={{ x, y, backgroundColor: color, animationDuration: `${duration}s` }}
-      className={cn('pointer-events-none absolute rounded-full blur-[120px] animate-blob', className)}
+      className={cn(
+        'pointer-events-none absolute rounded-full blur-[120px] animate-blob',
+        className,
+      )}
     />
   );
 }

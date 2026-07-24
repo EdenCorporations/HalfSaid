@@ -85,8 +85,8 @@ export default function ClinicianReportPage() {
           </h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{personaCondition}</p>
           <p className="mt-2 text-xs text-muted-foreground">
-            Generated {generatedAt.toLocaleString()} · ALL DATA SYNTHETIC — demo persona, not a
-            real patient.
+            Generated {generatedAt.toLocaleString()} · ALL DATA SYNTHETIC — demo persona, not a real
+            patient.
           </p>
         </header>
 

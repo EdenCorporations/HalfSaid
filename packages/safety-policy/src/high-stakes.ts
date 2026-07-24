@@ -41,7 +41,8 @@ const HIGH_STAKES_PATTERNS: Array<{ category: string; pattern: RegExp }> = [
   },
   {
     category: 'consent',
-    pattern: /\b(consent|authorize|authorise|permission to|agree to (the )?(procedure|treatment|terms))\b/i,
+    pattern:
+      /\b(consent|authorize|authorise|permission to|agree to (the )?(procedure|treatment|terms))\b/i,
   },
 ];
 

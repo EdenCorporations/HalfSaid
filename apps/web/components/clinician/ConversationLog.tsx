@@ -68,7 +68,10 @@ export function ConversationLog() {
     if (!items) return;
     setLoadingMore(true);
     try {
-      const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(items.length) });
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        offset: String(items.length),
+      });
       if (debouncedQuery) params.set('q', debouncedQuery);
       const res = await fetch(`/api/v1/pcg/timeline?${params}`, { headers: personaHeaders() });
       if (!res.ok) throw new Error(`request failed (${res.status})`);

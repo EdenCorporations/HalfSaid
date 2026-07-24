@@ -67,8 +67,8 @@ export default function ClinicianPage() {
           <CardHeader>
             <CardTitle className="text-base">Personal Communication Graph</CardTitle>
             <CardDescription>
-              The living graph behind every suggestion — hubs sized by connections, colored by
-              type. It grows as {personaName || 'the user'} speaks.
+              The living graph behind every suggestion — hubs sized by connections, colored by type.
+              It grows as {personaName || 'the user'} speaks.
             </CardDescription>
           </CardHeader>
           <CardContent>

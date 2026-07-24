@@ -190,5 +190,9 @@ export type {
   TimelineQuery,
   TimelineItem,
   TimelineResponse,
+  GraphNode,
+  GraphEdge,
+  GraphTotals,
+  GraphResponse,
 } from './api';
 export { toNodeDTO } from './api';

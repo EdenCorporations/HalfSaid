@@ -11,7 +11,10 @@ export function DottedWave({ className }: { className?: string }) {
   return (
     <div
       aria-hidden="true"
-      className={cn('pointer-events-none absolute inset-x-0 bottom-0 h-1/2 overflow-hidden', className)}
+      className={cn(
+        'pointer-events-none absolute inset-x-0 bottom-0 h-1/2 overflow-hidden',
+        className,
+      )}
       style={{
         maskImage: 'linear-gradient(to top, black 0%, transparent 85%)',
         WebkitMaskImage: 'linear-gradient(to top, black 0%, transparent 85%)',
@@ -20,8 +23,7 @@ export function DottedWave({ className }: { className?: string }) {
       <div
         className="absolute inset-y-0 -left-1/2 w-[200%] animate-wave-x"
         style={{
-          backgroundImage:
-            'radial-gradient(circle, rgba(192,132,252,0.35) 1px, transparent 1.6px)',
+          backgroundImage: 'radial-gradient(circle, rgba(192,132,252,0.35) 1px, transparent 1.6px)',
           backgroundSize: '30px 30px',
         }}
       />

@@ -26,11 +26,7 @@ export function PersonaSwitcher() {
   }
 
   return (
-    <div
-      role="group"
-      aria-label="Demo persona"
-      className="glass flex items-center rounded-xl p-1"
-    >
+    <div role="group" aria-label="Demo persona" className="glass flex items-center rounded-xl p-1">
       {PERSONAS.map((p) => {
         const selected = p.key === active;
         return (

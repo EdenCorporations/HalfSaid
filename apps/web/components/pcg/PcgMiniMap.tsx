@@ -221,7 +221,9 @@ export function PcgMiniMap({ height = 340, refreshKey = 0 }: PcgMiniMapProps) {
           best = n;
         }
       }
-      setHover(best ? { x: best.x, y: best.y - best.r - 8, label: best.label, type: best.type } : null);
+      setHover(
+        best ? { x: best.x, y: best.y - best.r - 8, label: best.label, type: best.type } : null,
+      );
     }
     function onLeave() {
       setHover(null);
@@ -237,7 +239,9 @@ export function PcgMiniMap({ height = 340, refreshKey = 0 }: PcgMiniMapProps) {
   }, [graph, height]);
 
   if (error) {
-    return <p className="text-sm text-muted-foreground">The graph view is unavailable right now.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">The graph view is unavailable right now.</p>
+    );
   }
   if (!graph) {
     return <p className="text-sm text-muted-foreground">Mapping the graph…</p>;

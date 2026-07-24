@@ -33,7 +33,11 @@ export function ParticleField({
   const y = useTransform(my, [-1, 1], [-depth, depth]);
 
   return (
-    <motion.div aria-hidden="true" style={{ x, y }} className="pointer-events-none absolute inset-0">
+    <motion.div
+      aria-hidden="true"
+      style={{ x, y }}
+      className="pointer-events-none absolute inset-0"
+    >
       {PARTICLES.map((p, i) => (
         <span
           key={i}
