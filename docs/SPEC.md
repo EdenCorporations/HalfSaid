@@ -497,7 +497,8 @@ MVP implements the first three; the rest are post-MVP and listed for context.
 | `/v1/suggestions` | POST | Supabase JWT | Context in → ranked candidates + confidence + provenance out | ✅ done |
 | `/v1/pcg/nodes` | GET/POST/PATCH/DELETE | Supabase JWT + RLS | CRUD; PATCH = append-only correction (supersede); DELETE revokes | ✅ done |
 | `/v1/pcg/timeline` | GET | Supabase JWT | Memory Timeline, filterable (person/topic/emotion/language) + free-text `q` search + `limit`/`offset` paging with `total` | ✅ done |
-| `/v1/pcg/ingest` | POST | Supabase JWT | Persist a spoken/typed utterance (embedded at insert) + LLM entity extraction into new nodes/edges (D20) | ✅ done |
+| `/v1/pcg/ingest` | POST | Supabase JWT | Persist an utterance (embedded at insert, 2-min dedup, `spoken`/`transcript` source) + LLM entity extraction into new nodes/edges + `expresses`→Intent (D20) | ✅ done |
+| `/v1/pcg/chat` | POST | Supabase JWT | Graph-building companion (chat only, never spoken): each message runs the full ingest pipeline, then an LLM reply acknowledges what was linked and asks a follow-up. Deterministic ack without a key | ✅ done |
 | `/v1/pcg/graph` | GET | Supabase JWT | Mini-map slice: hub-ranked nodes + closed edge set + whole-graph totals (growth counter) | ✅ done |
 | `/v1/federated/model`, `/v1/federated/aggregate` | GET/POST | Supabase JWT | Federated learning global model + masked-delta aggregation (see §18) | ✅ done |
 | `/v1/episodes/{id}/replay` | GET | Clinician OAuth | Replay Studio data | ✗ post-MVP |
@@ -723,6 +724,29 @@ Also closed from the gap report's §2.2 list: high-stakes **detection** (D4 reso
 conversation-log **search + pagination** (`q`/`offset`/`total`), global **error
 boundaries** (`app/error.tsx`, `app/global-error.tsx`), and **ingest-time
 embeddings** so new utterances are semantically retrievable immediately.
+
+### 19.1 Follow-up fixes (same day, post-review)
+
+- **Hybrid suggestions (D20 refined).** LLM-only output ignored the graph's real
+  answers ("Call my daughter" never surfaced "call Sarah"). `suggest()` now BLENDS:
+  the ranked constrained candidates are first-class cards; when the best PCG match
+  is strong (semantic ≥ 0.6 or keyword ≥ 0.5) the user's own phrases lead and the
+  LLM fills the rest, de-duplicated on retrieval's normalization. Verified live:
+  "Call my daughter" → `[PCG] call Sarah` above `[LLM]` cards.
+- **The graph grows from every interaction.** Typed/spoken *input* is ingested too
+  (`source: 'transcript'`), not just accepted suggestions; ingest also links the
+  extracted intent (`expresses` edge), de-duplicates repeats within 2 minutes
+  (API-ingested rows only — never seed rows), and tags rows tier 1 (`yours`).
+- **Fresh nodes are visible.** `/v1/pcg/graph` blends the most recent nodes into
+  the hub-ranked slice so a just-taught fact appears on the mini-map immediately.
+- **Teach HalfSaid chat (`/ingest`).** A chat-only companion page: every message
+  runs the full ingest pipeline (nodes + edges + embeddings), the reply confirms
+  what was saved (entity chips in the UI) and asks a follow-up; the growth chip and
+  mini-map update live. Verified live: a taught fact became the top PCG suggestion
+  30 seconds later.
+- **Bug fixes:** dismissing one generated card no longer hides all cards (dismissal
+  is per-card, not per-provenance); navigating away during the undo window commits
+  the accepted phrase (keepalive ingest) instead of silently dropping it.
 
 ---
 

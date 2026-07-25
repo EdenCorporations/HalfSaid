@@ -9,6 +9,7 @@ export { json, apiError, readJson, methodNotAllowed } from './http';
 export { handleSuggestions } from './handlers/suggestions';
 export { handleNodes } from './handlers/nodes';
 export { handleTimeline } from './handlers/timeline';
-export { handleIngest } from './handlers/ingest';
+export { handleIngest, ingestUtterance } from './handlers/ingest';
+export { handleChat } from './handlers/chat';
 export { handleGraph } from './handlers/graph';
 export { handleFederatedModel, handleFederatedAggregate } from './handlers/federated';
