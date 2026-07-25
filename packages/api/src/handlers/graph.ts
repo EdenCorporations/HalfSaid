@@ -32,7 +32,10 @@ export async function handleGraph(req: Request, deps: ApiDeps): Promise<Response
   const url = new URL(req.url);
   const limit = Math.min(120, Math.max(5, Number(url.searchParams.get('limit')) || 48));
 
-  // Rank by degree (connection count): the hubs are what make the graph legible.
+  // Hubs (connection count) make the graph legible; the freshest nodes make it
+  // ALIVE — anything just ingested must show up, even at degree 0/1, or the
+  // "graph grows as you speak" story is invisible.
+  const recentQuota = Math.min(10, Math.max(3, Math.floor(limit / 5)));
   const nodes = await exec<GraphNodeRow>(
     `with deg as (
        select n.id, count(e.id)::int as degree
@@ -40,6 +43,14 @@ export async function handleGraph(req: Request, deps: ApiDeps): Promise<Response
          left join public.pcg_edges e on (e.from_id = n.id or e.to_id = n.id)
         where n.user_id = $1 and n.superseded_by is null
         group by n.id
+     ),
+     hubs as (
+       select id from deg order by degree desc limit $2
+     ),
+     fresh as (
+       select n.id from public.pcg_nodes n
+        where n.user_id = $1 and n.superseded_by is null
+        order by n.ingestion_time desc limit $3
      )
      select n.id,
             n.node_type,
@@ -49,9 +60,10 @@ export async function handleGraph(req: Request, deps: ApiDeps): Promise<Response
        from public.pcg_nodes n
        join deg d on d.id = n.id
       where n.user_id = $1 and n.superseded_by is null
+        and (n.id in (select id from hubs) or n.id in (select id from fresh))
       order by d.degree desc, n.salience desc, n.event_time desc
-      limit $2;`,
-    [userId, limit],
+      limit $4;`,
+    [userId, limit - recentQuota, recentQuota, limit],
   );
 
   const ids = nodes.map((n) => n.id);

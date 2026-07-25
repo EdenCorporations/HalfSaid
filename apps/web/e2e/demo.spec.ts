@@ -38,7 +38,10 @@ test('demo path: tour → type → suggestions → accept (undo window) → clin
   await expect(page.getByText('read my book')).toBeVisible();
 
   // Accept one — spoken immediately, persisted only after the 5s undo window.
-  const ingested = page.waitForResponse((r) => r.url().includes('/pcg/ingest'));
+  // (Match the SPOKEN ingest specifically — the typed input is ingested too.)
+  const ingested = page.waitForResponse(
+    (r) => r.url().includes('/pcg/ingest') && (r.request().postData() ?? '').includes('call Sarah'),
+  );
   await page.getByRole('button', { name: /accept and speak: call Sarah/i }).click();
   await expect(page.getByLabel('Spoken')).toContainText('call Sarah');
   await expect(page.getByRole('button', { name: /undo speaking/i })).toBeVisible();
@@ -69,6 +72,22 @@ test('a detected high-stakes topic restricts to clinician-approved phrases', asy
   await page.getByRole('button', { name: /get suggestions/i }).click();
   // Whether cards or a refusal come back, the block explains itself.
   await expect(page.getByText(/clinician-approved/i).first()).toBeVisible();
+});
+
+test('teach chat: a typed fact is ingested and acknowledged', async ({ page }) => {
+  await skipTour(page);
+  await page.goto('/ingest');
+  const fact = 'Nora visits every Sunday and they bake scones';
+  await page.getByLabel(/tell halfsaid something/i).fill(fact);
+  const ingested = page.waitForResponse((r) => r.url().includes('/pcg/chat'));
+  await page.getByRole('button', { name: /send/i }).click();
+  await ingested;
+  // The message bubble + the (no-key deterministic) acknowledgement render.
+  await expect(page.getByText(fact)).toBeVisible();
+  await expect(page.getByText(/saved/i).first()).toBeVisible();
+  // …and the fact is now IN the graph: the clinician log shows it.
+  await page.goto('/clinician');
+  await expect(page.getByText(fact).first()).toBeVisible();
 });
 
 test('persona switch: David gets suggestions from HIS graph', async ({ page }) => {

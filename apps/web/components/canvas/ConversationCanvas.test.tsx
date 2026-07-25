@@ -45,9 +45,12 @@ function mockFetch(response: SuggestionsResponse) {
   }) as unknown as typeof fetch;
 }
 
-function ingestCalls(): number {
-  return (global.fetch as jest.Mock).mock.calls.filter(([url]) =>
-    String(url).includes('/api/v1/pcg/ingest'),
+/** Ingest calls whose body contains the given text (input ingest ≠ spoken ingest). */
+function ingestCalls(text: string): number {
+  return (global.fetch as jest.Mock).mock.calls.filter(
+    ([url, init]) =>
+      String(url).includes('/api/v1/pcg/ingest') &&
+      String((init as RequestInit | undefined)?.body ?? '').includes(text),
   ).length;
 }
 
@@ -105,16 +108,17 @@ describe('ConversationCanvas', () => {
       const card = await screen.findByRole('group', { name: /suggestion: call Sarah/i });
       await user.click(within(card).getByRole('button', { name: /accept and speak/i }));
 
-      // Spoken immediately + undo offered; NOT yet persisted.
+      // Spoken immediately + undo offered; NOT yet persisted (the earlier input
+      // ingest carries "I want to", not the accepted phrase).
       expect(screen.getByLabelText('Spoken')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /undo speaking/i })).toBeInTheDocument();
-      expect(ingestCalls()).toBe(0);
+      expect(ingestCalls('call Sarah')).toBe(0);
 
       // Window elapses → the utterance lands in the PCG.
       act(() => {
         jest.advanceTimersByTime(5100);
       });
-      await waitFor(() => expect(ingestCalls()).toBe(1));
+      await waitFor(() => expect(ingestCalls('call Sarah')).toBe(1));
     } finally {
       jest.useRealTimers();
     }
@@ -136,7 +140,7 @@ describe('ConversationCanvas', () => {
       act(() => {
         jest.advanceTimersByTime(6000);
       });
-      expect(ingestCalls()).toBe(0);
+      expect(ingestCalls('call Sarah')).toBe(0);
       expect(screen.queryByLabelText('Spoken')).not.toBeInTheDocument();
     } finally {
       jest.useRealTimers();

@@ -54,9 +54,11 @@ export function PcgGrowthChip({ refreshKey = 0 }: PcgGrowthChipProps) {
       className={`glass inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-shadow ${
         grew ? 'shadow-glow text-foreground' : 'text-muted-foreground'
       }`}
-      aria-label={`Personal Communication Graph: ${totals.nodes} nodes and ${totals.edges} edges`}
     >
       <Network className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+      <span className="sr-only">
+        Personal Communication Graph: {totals.nodes} nodes and {totals.edges} edges
+      </span>
       <span aria-hidden="true">
         PCG {totals.nodes} nodes · {totals.edges} edges
       </span>
