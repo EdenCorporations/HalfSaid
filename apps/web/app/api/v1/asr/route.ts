@@ -34,6 +34,7 @@ export async function POST(req: Request): Promise<Response> {
   const groqForm = new FormData();
   groqForm.append('file', audio, 'audio.webm');
   groqForm.append('model', 'whisper-large-v3');
+  groqForm.append('language', 'en');
   groqForm.append('response_format', 'json');
 
   let res: Response;
