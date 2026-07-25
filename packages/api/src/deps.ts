@@ -18,6 +18,8 @@ export interface ApiDeps {
   embedder?: Embedder;
   /** Groq key — when set, the LLM writes the suggestions (D20); else constrained. */
   llmApiKey?: string;
+  /** Injectable fetch for the LLM calls (tests); defaults to global fetch. */
+  llmFetch?: typeof fetch;
   /** Clock for recency (epoch seconds); defaults to real time. */
   now?: () => number;
 }

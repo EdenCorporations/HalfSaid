@@ -46,7 +46,7 @@ describe('suggest() end-to-end', () => {
     }
   });
 
-  it('uses LLM generation when a Groq key is provided (D20)', async () => {
+  it('BLENDS retrieved PCG phrases with LLM cards when a Groq key is provided (D20)', async () => {
     const fetchImpl = (async () => ({
       ok: true,
       status: 200,
@@ -55,7 +55,8 @@ describe('suggest() end-to-end', () => {
           {
             message: {
               content: JSON.stringify({
-                suggestions: ['I want to visit the garden', 'I need to rest'],
+                // One duplicates a PCG phrase (must de-dupe), one is novel.
+                suggestions: ['I want to call Sarah', 'I want to visit the garden'],
               }),
             },
           },
@@ -70,8 +71,41 @@ describe('suggest() end-to-end', () => {
     );
     expect(res.kind).toBe('candidates');
     if (res.kind !== 'candidates') return;
-    expect(res.candidates.every((c) => c.generated)).toBe(true);
-    expect(res.candidates.map((c) => c.text)).toContain('I want to visit the garden');
+    const texts = res.candidates.map((c) => c.text);
+    // The user's own phrases lead (strong match) AND the LLM's novel sentence appears.
+    expect(res.candidates[0]!.generated).toBeUndefined();
+    expect(texts).toContain('call Sarah');
+    expect(texts).toContain('I want to visit the garden');
+    // De-dupe: "I want to call Sarah" (LLM) collapses into "call Sarah" (PCG).
+    expect(texts).not.toContain('I want to call Sarah');
+  });
+
+  it('a close graph match beats generic generation ("Call my daughter" → "call Sarah")', async () => {
+    const junkLlm = (async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        choices: [
+          {
+            message: { content: JSON.stringify({ suggestions: ['I need help', 'Call her now'] }) },
+          },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+
+    const res = await suggest(
+      exec,
+      { userId: MAYA, partialText: 'Call my daughter', intent: 'request' },
+      { ...opts, groqApiKey: 'k', fetchImpl: junkLlm },
+    );
+    if (res.kind !== 'candidates') throw new Error('expected candidates');
+    const texts = res.candidates.map((c) => c.text);
+    expect(texts).toContain('call Sarah');
+    const pcgIdx = texts.indexOf('call Sarah');
+    const llmIdx = texts.indexOf('I need help');
+    // The PCG's real answer ranks above the LLM's generic one.
+    expect(res.candidates[pcgIdx]!.generated).toBeUndefined();
+    if (llmIdx !== -1) expect(pcgIdx).toBeLessThan(llmIdx);
   });
 
   it('respects the max-cards cognitive-load budget', async () => {

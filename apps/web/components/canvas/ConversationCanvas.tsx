@@ -17,7 +17,7 @@ import { PcgMiniMap } from '@/components/pcg/PcgMiniMap';
 import { useSuggestions } from '@/lib/client/useSuggestions';
 import { useAsr } from '@/lib/client/useAsr';
 import { speak, cancelSpeech } from '@/lib/client/tts';
-import { logSpokenUtterance } from '@/lib/client/log';
+import { logSpokenUtterance, logInputUtterance } from '@/lib/client/log';
 import { getPersona } from '@/lib/client/persona';
 import { InputBar } from './InputBar';
 import { SuggestionCard } from './SuggestionCard';
@@ -75,9 +75,12 @@ export function ConversationCanvas() {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoText = useRef<string | null>(null);
 
+  // Dismissal is per CARD (generated cards can share grounding node ids, so
+  // dismissing by provenance would wrongly hide every card at once).
+  const cardKey = (c: SuggestionCandidate) => `${c.provenance.nodeIds.join('-')}|${c.text}`;
   const candidates: SuggestionCandidate[] =
     response?.kind === 'candidates'
-      ? response.candidates.filter((c) => !c.provenance.nodeIds.some((id) => dismissed.has(id)))
+      ? response.candidates.filter((c) => !dismissed.has(cardKey(c)))
       : [];
 
   // First visit → guided walkthrough (Enhancement 4); persona label after mount.
@@ -107,6 +110,11 @@ export function ConversationCanvas() {
     () => () => {
       if (speakTimer.current) clearTimeout(speakTimer.current);
       if (undoTimer.current) clearTimeout(undoTimer.current);
+      // Leaving the page must not LOSE an accepted phrase: commit it now
+      // (the ingest fetch is keepalive, so it survives the navigation).
+      const text = undoText.current;
+      undoText.current = null;
+      if (text) void logSpokenUtterance(text);
     },
     [],
   );
@@ -116,6 +124,9 @@ export function ConversationCanvas() {
     setDismissed(new Set());
     setShowEmergency(false);
     void request({ partialText: text, intent: 'request' });
+    // The user's OWN words are PCG material: ingest the input (best-effort,
+    // deduped server-side) so the graph grows from every interaction.
+    void logInputUtterance(text).then(() => setGraphKey((k) => k + 1));
   }
 
   // Microphone → Groq Whisper → transcript → suggestions. Interim text streams
@@ -173,7 +184,7 @@ export function ConversationCanvas() {
     utter(c.text);
   }
   function reject(c: SuggestionCandidate) {
-    setDismissed((d) => new Set([...d, ...c.provenance.nodeIds]));
+    setDismissed((d) => new Set([...d, cardKey(c)]));
     setStatus('Suggestion dismissed.');
     inputRef.current?.focus();
   }
@@ -270,6 +281,12 @@ export function ConversationCanvas() {
             >
               <CircleHelp className="h-5 w-5" aria-hidden="true" />
             </button>
+            <Link
+              href="/ingest"
+              className="inline-flex min-h-touch items-center rounded-xl px-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Teach
+            </Link>
             <Link
               href="/clinician"
               className="inline-flex min-h-touch items-center rounded-xl px-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

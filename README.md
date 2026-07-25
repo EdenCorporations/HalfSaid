@@ -215,6 +215,13 @@ All 15 enhancements from the external gap analysis, closed
 - **Demo-day polish** — 4-step guided tour, teach-a-new-phrase refusal exit,
   keyboard shortcuts (1–5 / M / Esc), long-press-to-edit, staggered card animations,
   landing stat strip, and global error boundaries.
+- **Hybrid suggestions** — the graph's own phrases are first-class cards blended
+  with LLM sentences: a strong PCG match ("Call my daughter" → *"call Sarah"*)
+  always leads; the LLM fills in fluent alternatives, de-duplicated.
+- **Teach HalfSaid (`/ingest`)** — a chat-only companion: tell it about the
+  person's life and every message becomes graph material (nodes + edges +
+  embeddings), with entity chips showing exactly what was added and the mini-map
+  updating live. A fact you teach is suggestible seconds later.
 
 ## 5. Tech Stack
 

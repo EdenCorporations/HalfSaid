@@ -35,14 +35,16 @@ function buildMessages(ctx: SuggestionContext, context: RetrievedCandidate[], co
     .join('\n');
   const system =
     'You help a person with aphasia say what they mean. They can only tap a suggestion, ' +
-    'so write short, natural, first-person sentences they might want to say right now. Use ' +
-    'the context about their life when it fits, but everyday phrases are fine too. Keep each ' +
-    `under 12 words. Return ONLY JSON: {"suggestions": ["...", ...]} with exactly ${count} items.`;
+    'so write short, natural, first-person sentences they might want to say right now. ' +
+    'Their own saved phrases are provided as context — when one already says what they ' +
+    'are starting to say, include it VERBATIM as a suggestion; specifics from their life ' +
+    '(names, places, routines) always beat generic wording. Keep each under 12 words. ' +
+    `Return ONLY JSON: {"suggestions": ["...", ...]} with exactly ${count} items.`;
   const user =
-    (said ? `Things they've said before:\n${said}\n\n` : '') +
+    (said ? `Their own saved phrases:\n${said}\n\n` : '') +
     `They are starting to say: "${ctx.partialText}".` +
     (ctx.intent ? ` Their intent seems to be: ${ctx.intent}.` : '') +
-    `\nSuggest ${count} short first-person sentences.`;
+    `\nSuggest ${count} short first-person sentences they most likely mean.`;
   return [
     { role: 'system', content: system },
     { role: 'user', content: user },
@@ -95,8 +97,8 @@ export async function generateSuggestions(
     .filter(Boolean)
     .slice(0, count);
 
-  // Grounding = the context items that informed the generation (may be empty).
-  const groundingNodeIds = context.slice(0, 12).map((c) => c.nodeId);
+  // Grounding = the top context items that informed the generation (may be empty).
+  const groundingNodeIds = context.slice(0, 5).map((c) => c.nodeId);
   const confidence = context.length > 0 ? 0.82 : 0.7; // grounded ships; cold-start sandboxes
 
   const candidates: SuggestionCandidate[] = [];

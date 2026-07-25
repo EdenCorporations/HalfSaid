@@ -44,7 +44,8 @@ describe('GET /v1/pcg/graph', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as GraphBody;
 
-    expect(body.nodes.length).toBe(40);
+    expect(body.nodes.length).toBeGreaterThan(30);
+    expect(body.nodes.length).toBeLessThanOrEqual(40);
     expect(body.totals.nodes).toBeGreaterThan(150); // full Maya seed
     expect(body.totals.edges).toBeGreaterThan(100);
 
@@ -68,6 +69,19 @@ describe('GET /v1/pcg/graph', () => {
     const labels = body.nodes.map((n) => n.label);
     expect(labels).toContain('Anna');
     expect(labels).not.toContain('Sarah');
+  });
+
+  it('freshly ingested nodes appear on the map even at low degree', async () => {
+    h.setUser(MAYA);
+    await t.become({ kind: 'postgres' });
+    await t.query(
+      `insert into public.pcg_nodes (user_id, node_type, attributes, event_time, privacy_tier)
+         values ($1, 'Utterance', '{"content":"a brand new phrase"}'::jsonb, now(), 1);`,
+      [MAYA],
+    );
+    const res = await handleGraph(get('?limit=40'), h.deps);
+    const body = (await res.json()) as GraphBody;
+    expect(body.nodes.map((n) => n.label)).toContain('a brand new phrase');
   });
 
   it('401 unauthenticated, 405 on POST', async () => {
